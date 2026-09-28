@@ -1,6 +1,11 @@
 import { Hero } from "@/components/home/hero";
+import { HowToGive } from "@/components/home/how-to-give";
 import { Incentives } from "@/components/home/incentives";
+import { SiteFooter } from "@/components/home/site-footer";
 import { SiteHeader } from "@/components/home/site-header";
+import { Standings } from "@/components/home/standings";
+import { TopDonors } from "@/components/home/top-donors";
+import { ZoneMap } from "@/components/home/zone-map";
 
 export default function Home() {
   return (
@@ -15,7 +20,12 @@ export default function Home() {
       <main id="main" tabIndex={-1} className="outline-none">
         <Hero />
         <Incentives />
+        <Standings />
+        <TopDonors />
+        <HowToGive />
+        <ZoneMap />
       </main>
+      <SiteFooter />
     </>
   );
 }
