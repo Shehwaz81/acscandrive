@@ -13,14 +13,16 @@ export const metadata: Metadata = {
   robots: { index: false },
 };
 
+type MdNode = { type: string; value?: string; children?: MdNode[] };
+const textOf = (n: MdNode): string => n.value ?? (n.children ?? []).map(textOf).join("");
 const slug = (s: string) =>
   s.toLowerCase().replace(/[^a-z0-9\s-]/g, "").trim().replace(/\s+/g, "-");
 
 /** Markdown element styled with the site's tokens. Headings get ids for in-page links. */
 function styled(Tag: ElementType, className: string, { anchor = false } = {}) {
   function Styled({ node, children, ...rest }: ExtraProps & { children?: ReactNode }) {
-    void node; // react-markdown's AST node; must not reach the DOM.
-    const id = anchor ? slug(String(children)) : undefined;
+    // `node` is react-markdown's AST node: used for the heading text, kept off the DOM.
+    const id = anchor && node ? slug(textOf(node as MdNode)) : undefined;
     return (
       <Tag id={id} className={className} {...rest}>
         {children}
