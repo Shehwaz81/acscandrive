@@ -8,6 +8,9 @@ const bigShoulders = Big_Shoulders({
   variable: "--font-big-shoulders",
   subsets: ["latin"],
   axes: ["opsz"],
+  // next/font has no metrics to auto-tune a fallback for this family.
+  adjustFontFallback: false,
+  fallback: ["Impact", "Arial Narrow", "sans-serif"],
 });
 
 const instrumentSans = Instrument_Sans({
