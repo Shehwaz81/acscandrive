@@ -29,7 +29,7 @@ export function Incentives() {
           </div>
         </div>
 
-        <div className="flex flex-col gap-[22px] lg:grid lg:grid-cols-[minmax(0,5fr)_minmax(0,7fr)] lg:gap-14">
+        <div className="flex flex-col gap-[22px] xl:grid xl:grid-cols-[minmax(0,5fr)_minmax(0,7fr)] xl:gap-14">
           <div className="flex flex-col gap-[22px] lg:gap-7">
             <GroupHeading title="Just you" note="Individual rewards" />
             <Ticket stub="INDIVIDUAL" number={1} className="-rotate-[1.2deg] bg-butter lg:-rotate-[1.5deg]">
@@ -69,7 +69,7 @@ export function Incentives() {
             </Ticket>
           </div>
 
-          <div className="flex flex-col gap-[22px] pt-2 lg:gap-7 lg:pt-0">
+          <div className="flex flex-col gap-[22px] pt-2 lg:gap-7 lg:pt-4 xl:pt-0">
             <GroupHeading title="Your homeroom" note="Class rewards — everyone’s cans add up" />
             <Ticket
               stub="HOMEROOM"
@@ -79,7 +79,7 @@ export function Incentives() {
             >
               <div className="flex items-center gap-4 px-5 pt-5 pb-[22px] lg:gap-9 lg:px-10 lg:py-[30px]">
                 <span className="font-display text-[80px] leading-[.78] font-black lg:text-[150px]">#1</span>
-                <div className="flex flex-col gap-1.5 lg:gap-2.5">
+                <div className="flex min-w-0 flex-col gap-1.5 lg:gap-2.5">
                   <h3 className="font-display text-[30px] leading-[.9] font-black uppercase lg:text-[54px]">
                     Homeroom pizza party
                   </h3>

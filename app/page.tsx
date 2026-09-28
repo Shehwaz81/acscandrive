@@ -17,7 +17,7 @@ export default function Home() {
         Skip to content
       </a>
       <SiteHeader />
-      <main id="main" tabIndex={-1} className="outline-none">
+      <main id="main" tabIndex={-1} className="overflow-x-clip outline-none">
         <Hero />
         <Incentives />
         <Standings />

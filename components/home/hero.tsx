@@ -17,7 +17,7 @@ export function Hero() {
           <span className="hidden text-[13px] font-semibold tracking-[.1em] text-muted uppercase md:block">
             Assumption College Catholic Secondary School
           </span>
-          <h1 className="font-display text-[clamp(3.75rem,19.5vw,6.5rem)] leading-[.84] font-black tracking-[-.01em] uppercase xl:text-[clamp(6.5rem,9.4vw,8.5rem)]">
+          <h1 className="font-display text-[min(calc((100vw-40px)/5),6.5rem)] leading-[.84] font-black tracking-[-.01em] uppercase xl:text-[clamp(6.5rem,9.4vw,8.5rem)]">
             Small cans.
             <br />
             <MarkerUnderline className="text-tomato" strokeClassName="bottom-0 h-4 xl:bottom-0.5 xl:h-[26px]">

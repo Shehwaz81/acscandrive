@@ -9,7 +9,7 @@ const STEPS = [
 export function HowToGive() {
   return (
     <section id="how-to-give" aria-labelledby="give-title" className="scroll-mt-4">
-      <div className={`${WRAP} grid gap-6 py-11 lg:grid-cols-[minmax(0,4fr)_minmax(0,8fr)] lg:gap-14 lg:py-[88px]`}>
+      <div className={`${WRAP} grid gap-6 py-11 lg:gap-10 xl:grid-cols-[minmax(0,4fr)_minmax(0,8fr)] xl:gap-14 lg:py-[88px]`}>
         <div className="flex flex-col gap-4 lg:gap-[18px]">
           <h2
             id="give-title"

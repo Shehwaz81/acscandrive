@@ -9,7 +9,7 @@ const PODIUM = [
     place: 2,
     suffix: "ND",
     body: "bg-paper",
-    size: "h-[160px] w-[104px] lg:h-[230px] lg:w-[168px]",
+    size: "h-[160px] w-[min(104px,26vw)] lg:h-[230px] lg:w-[168px]",
     num: "text-[46px] lg:text-[68px]",
     sfx: "text-[15px] lg:text-[22px]",
     numPos: "top-3.5 lg:top-[22px]",
@@ -20,7 +20,7 @@ const PODIUM = [
     place: 1,
     suffix: "ST",
     body: "bg-butter",
-    size: "h-[204px] w-[112px] lg:h-[300px] lg:w-[184px]",
+    size: "h-[204px] w-[min(112px,28vw)] lg:h-[300px] lg:w-[184px]",
     num: "text-[64px] lg:text-[96px]",
     sfx: "text-[19px] lg:text-[28px]",
     numPos: "top-[18px] lg:top-[26px]",
@@ -31,7 +31,7 @@ const PODIUM = [
     place: 3,
     suffix: "RD",
     body: "bg-tomato",
-    size: "h-[138px] w-[100px] lg:h-[196px] lg:w-[160px]",
+    size: "h-[138px] w-[min(100px,25vw)] lg:h-[196px] lg:w-[160px]",
     num: "text-[38px] lg:text-[56px] text-white",
     sfx: "text-[14px] lg:text-[20px] text-white",
     numPos: "top-2.5 lg:top-3.5",
@@ -42,13 +42,14 @@ const PODIUM = [
 
 export function TopDonors() {
   const runnersUp = TOP_DONORS.slice(3);
+  // Two columns only from xl: the desktop podium is ~620px wide.
   return (
     <section
       aria-labelledby="donors-title"
       className="border-b-2 border-ink bg-kraft"
     >
       <div
-        className={`${WRAP} grid gap-[18px] pt-10 pb-11 lg:grid-cols-[minmax(0,5fr)_minmax(0,7fr)] lg:items-end lg:gap-x-[72px] lg:gap-y-[22px] lg:pt-[88px] lg:pb-24`}
+        className={`${WRAP} grid gap-[18px] pt-10 pb-11 lg:gap-[22px] lg:pt-[88px] lg:pb-24 xl:grid-cols-[minmax(0,5fr)_minmax(0,7fr)] xl:items-end xl:gap-x-[72px]`}
       >
         <div className="flex flex-col gap-[18px] lg:gap-[22px]">
           <span className="font-mono text-[11px] font-semibold tracking-[.14em] text-muted lg:text-xs">
@@ -91,11 +92,11 @@ export function TopDonors() {
 
 function Podium() {
   return (
-    <div className="relative flex flex-col pt-[34px] lg:col-start-2 lg:row-span-2 lg:row-start-1 lg:items-center lg:pt-0">
+    <div className="relative flex flex-col pt-[34px] lg:items-center lg:py-4 xl:col-start-2 xl:row-span-2 xl:row-start-1 xl:py-0">
       <span className="absolute top-0 right-0 rotate-5 font-marker text-lg leading-none text-tomato lg:-top-1.5 lg:right-6 lg:rotate-6 lg:text-[26px] lg:leading-[1.1]">
         top 3 win lunch!
       </span>
-      <ol className="flex items-end justify-center gap-3 lg:gap-8 lg:px-6">
+      <ol className="flex items-end justify-center gap-2 min-[390px]:gap-3 lg:gap-8 lg:px-6">
         {PODIUM.map((p) => {
           const d = TOP_DONORS[p.place - 1];
           return (
