@@ -1,26 +1,95 @@
 @import "tailwindcss";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
+/* Design tokens from "Can Drive Homepage" (claude.ai/design). Warm paper + ink,
+   with tomato and butter accents borrowed from a soup-can label. */
+@theme {
+  --color-ink: #1b1a17;
+  --color-paper: #f4eee2;
+  --color-kraft: #e9e0cd;
+  --color-tomato: #c8432a;
+  --color-tomato-dark: #b33a23;
+  --color-butter: #f2c230;
+  --color-muted: #5b554b;
+  --color-body: #3a362f;
+  --color-rule: #cfc5b0;
+  --color-dot: #8a8274;
+  --color-lid: #dcd2be;
+  --color-zone: #d8cfbd;
+  --color-canvas: #d9d3c7;
+
+  --font-sans: var(--font-instrument-sans), system-ui, sans-serif;
+  --font-display: var(--font-big-shoulders), Impact, sans-serif;
+  --font-marker: var(--font-permanent-marker), cursive;
+  --font-mono: ui-monospace, Menlo, monospace;
 }
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+@layer base {
+  html {
+    scroll-padding-top: 1rem;
+  }
+  @media (prefers-reduced-motion: no-preference) {
+    html {
+      scroll-behavior: smooth;
+    }
+  }
+  body {
+    background: var(--color-paper);
+    color: var(--color-ink);
+    font-family: var(--font-sans);
+    -webkit-font-smoothing: antialiased;
+  }
+  a {
+    color: inherit;
+    text-decoration-thickness: 2px;
+    text-underline-offset: 3px;
+  }
+  a:hover {
+    color: var(--color-tomato);
+  }
+  button {
+    cursor: pointer;
+  }
+  button:disabled {
+    cursor: default;
+  }
+  *:focus-visible {
+    outline: 3px solid var(--color-butter);
+    outline-offset: 3px;
+    box-shadow: 0 0 0 6px var(--color-ink);
   }
 }
 
-body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+/* Effects that would be unreadable as Tailwind arbitrary values. Declared with
+   @utility so responsive variants (e.g. lg:can-lid) work. */
+
+/* Torn-ticket notches on both short edges. Resize with [--notch:13px]. */
+@utility ticket-mask {
+  --notch: 10px;
+  -webkit-mask:
+    radial-gradient(circle at 0 50%, #0000 var(--notch), #000 calc(var(--notch) + 1px)) 0 0 / 51% 100% no-repeat,
+    radial-gradient(circle at 100% 50%, #0000 var(--notch), #000 calc(var(--notch) + 1px)) 100% 0 / 51% 100% no-repeat;
+  mask:
+    radial-gradient(circle at 0 50%, #0000 var(--notch), #000 calc(var(--notch) + 1px)) 0 0 / 51% 100% no-repeat,
+    radial-gradient(circle at 100% 50%, #0000 var(--notch), #000 calc(var(--notch) + 1px)) 100% 0 / 51% 100% no-repeat;
+}
+
+@utility can-ribs {
+  background: repeating-linear-gradient(90deg, rgb(27 26 23 / 0.07) 0 2px, transparent 2px 14px);
+}
+
+@utility can-lid {
+  background: repeating-linear-gradient(90deg, var(--color-kraft) 0 6px, var(--color-lid) 6px 9px);
+}
+
+@utility hatch {
+  background: repeating-linear-gradient(135deg, var(--color-ink) 0 2px, var(--color-zone) 2px 7px);
+}
+
+@utility progress-stripes {
+  background: repeating-linear-gradient(135deg, var(--color-tomato) 0 8px, var(--color-tomato-dark) 8px 12px);
+}
+
+@utility stub-label {
+  writing-mode: vertical-rl;
+  transform: rotate(180deg);
 }
