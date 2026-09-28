@@ -13,7 +13,9 @@
 ## Repository orientation
 
 - Before editing, inspect the relevant code, package scripts, lockfile, migrations, and existing tests. Follow the repository's actual conventions and installed versions.
-- Current state: Next.js 16 / React 19 / Tailwind v4 app (pnpm). The public homepage frontend is built on demo data. There is no database schema, auth, or API yet, so the schema below is the proposed direction, not implemented or deployed state.
+- Current state: Next.js 16 / React 19 / Tailwind v4 app (pnpm). The public homepage frontend is built on demo data. The app is connected to Supabase project `gcrfsdmkcfywkofhijsi`, which holds `students` (the real roster) and `donation_logs`. Both tables have RLS enabled and no policies, so they are server-only. There is no auth or API yet.
+- Supabase: use `@supabase/ssr` + `@supabase/supabase-js`. Use `lib/supabase/server.ts` for request-scoped clients (RLS applies), `lib/supabase/client.ts` for the browser, and `lib/supabase/admin.ts` only in server code that checks authorization itself (it bypasses RLS). `proxy.ts` refreshes the session cookie. Env vars live in `.env`: `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`, `SUPABASE_SECRET_KEY`.
+- Migrations live in `supabase/migrations` (Supabase CLI via `pnpm exec supabase`). The baseline migration mirrors the schema that was created by hand on the remote project. Regenerate `lib/supabase/database.types.ts` after schema changes.
 - Architecture and design decisions live in `docs/architecture.md`, which is rendered at `/docs`. Update it when a decision changes.
 - Recommended architecture: a focused Next.js/TypeScript application with Supabase/Postgres and Vercel hosting. Keep this school's Supabase project separate from Lemma. Do not migrate an existing stack merely to match this recommendation.
 - Discover development, lint, typecheck, test, and build commands from the repository; do not invent scripts or claim unrun commands passed. Once verified, record the useful commands here.

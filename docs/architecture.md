@@ -2,7 +2,7 @@
 
 This is the running record of how the Can Drive site is built and why. Update it when a decision changes. Business rules and data constraints live in `CLAUDE.md`. This file covers the technical and design choices made to satisfy them.
 
-_Last updated: 2026-09-27. Current scope: public homepage frontend with demo data. There is no database, auth, or API yet._
+_Last updated: 2026-09-27. Current scope: public homepage frontend with demo data. Supabase is connected (schema and roster only), and there is no auth or API yet._
 
 ## Stack
 
@@ -14,7 +14,7 @@ _Last updated: 2026-09-27. Current scope: public homepage frontend with demo dat
 | Fonts | `next/font/google` | Self-hosted at build time, so there are no runtime requests to Google. |
 | Docs rendering | `react-markdown` + `remark-gfm` | Renders this file at `/docs`. |
 | Hosting (planned) | Vercel | |
-| Data (planned) | Supabase/Postgres | Not wired up yet. See [Open items](#open-items). |
+| Data | Supabase/Postgres via `@supabase/ssr` + `@supabase/supabase-js` | See [Supabase connection](#supabase-connection). |
 
 ## Source of the design
 
@@ -88,6 +88,19 @@ Checked at 320, 390, 768, 1024, 1280 and 1440 with no horizontal scroll.
 
 **Effects** that would be unreadable as Tailwind arbitrary values are named utilities in `globals.css`: `ticket-mask`, `can-ribs`, `can-lid`, `hatch`, `progress-stripes` and `stub-label`. They are declared with `@utility`, so responsive variants like `lg:can-lid` work.
 
+## Supabase connection
+
+| File | Key | RLS | Use |
+| --- | --- | --- | --- |
+| `lib/supabase/server.ts` | Publishable + session cookie | Applies | Server components, server actions, route handlers |
+| `lib/supabase/client.ts` | Publishable | Applies | Client components (nothing needs it yet) |
+| `lib/supabase/admin.ts` | Secret, `server-only` | Bypassed | Server code that has already checked authorization |
+| `proxy.ts` → `lib/supabase/proxy.ts` | Publishable | n/a | Refreshes the auth cookie with `getClaims()` on each request |
+
+- **Why not `@supabase/server`:** it's a public-beta package built for header-based backends such as Edge Functions. In Next.js it still needs `@supabase/ssr` for cookies, plus hand-rolled JWKS caching. The supabase-js `auth.getClaims()` call already verifies JWTs.
+- **Current access:** `students` and `donation_logs` have RLS enabled with no policies, so publishable-key requests see no rows and can't write (verified: `students` returns 0 of 1,113 rows, and an insert is rejected with 42501). All data access goes through server code until volunteer roles and public aggregates are designed.
+- **Schema source:** the tables were created directly on the remote project. `supabase/migrations/20260927000000_baseline_schema.sql` reproduces them, and `lib/supabase/database.types.ts` is generated from the live schema.
+
 ## Data boundary
 
 Every figure on the homepage comes from **`lib/demo-data.ts`**. It holds the goal, school total, 16 homerooms, the fictional top donors and the zone grid, plus pure helpers:
@@ -135,4 +148,4 @@ The cash split (`~27%`) and the “$1 = 1 can” wording are demo placeholders. 
 | Incentive rules | Organizers | Dates, cutoffs, ties, dodgeball qualification order, and cash treatment. |
 | Public donor names | Owner | The page shows “First L.” names (fictional). How real names appear publicly is a privacy decision. |
 | Desk location, hours, organizer contact | Organizers | Shown as “TBC” boxes. |
-| `utils/supabase/server.ts` | Build | It is currently a copy of the browser client and imports `@supabase/ssr`, which isn't installed (`@supabase/server` is). Fix it when the data layer is built. |
+| Baseline migration history | Owner | `supabase/migrations/20260927000000_baseline_schema.sql` is already applied on the remote project but isn't recorded there. Run `pnpm exec supabase login`, then `link --project-ref gcrfsdmkcfywkofhijsi`, then `migration repair --status applied 20260927000000`. |
