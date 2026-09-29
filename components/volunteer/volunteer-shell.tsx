@@ -27,7 +27,7 @@ export function VolunteerShell({ children }: { children: ReactNode }) {
         homeHref="/"
         navFrom="md"
         aside={
-          <p className="flex items-center gap-3 border-l border-rule py-3 pl-4 text-[13px] text-muted lg:pl-6">
+          <div className="flex items-center gap-3 border-l border-rule py-3 pl-4 text-[13px] text-muted lg:pl-6">
             <span className="hidden font-bold text-ink lg:inline">Volunteer desk</span>
             <span aria-hidden className="hidden lg:inline">
               ·
@@ -37,7 +37,7 @@ export function VolunteerShell({ children }: { children: ReactNode }) {
                 Sign out
               </button>
             </form>
-          </p>
+          </div>
         }
         menuAside={
           <form action={logout} className="pt-4 pb-1 text-sm text-rule">
