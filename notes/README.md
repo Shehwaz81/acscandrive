@@ -13,5 +13,6 @@ Suggested reading order:
 5. [Why the old connection code didn't work](05-why-the-old-code-failed.md). A post-mortem that uses all of the above.
 6. [Migrations](06-migrations.md). Treating a database schema as code.
 7. [Docker](07-docker.md). What containers are and why the Supabase CLI wants them.
+8. [Idempotent writes and interfaces as seams](08-idempotency-and-interfaces.md). Why a retried save can't double-count, and why the UI talks to an interface instead of a database.
 
 Never put real student names or donation records in these notes.

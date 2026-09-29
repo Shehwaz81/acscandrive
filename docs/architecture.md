@@ -2,7 +2,7 @@
 
 This is the running record of how the Can Drive site is built and why. Update it when a decision changes. Business rules and data constraints live in `CLAUDE.md`. This file covers the technical and design choices made to satisfy them.
 
-_Last updated: 2026-09-27. Current scope: public homepage frontend with demo data. Supabase is connected (schema and roster only), and there is no auth or API yet._
+_Last updated: 2026-09-28. Current scope: public homepage frontend with demo data, and the volunteer workspace (`/volunteer`) frontend on an in-memory mock. Supabase is connected (schema and roster only), and there is no auth or API yet._
 
 ## Stack
 
@@ -13,6 +13,7 @@ _Last updated: 2026-09-27. Current scope: public homepage frontend with demo dat
 | Styling | Tailwind CSS v4 | Tokens live in `app/globals.css` via `@theme`. There is no `tailwind.config`. |
 | Fonts | `next/font/google` | Self-hosted at build time, so there are no runtime requests to Google. |
 | Docs rendering | `react-markdown` + `remark-gfm` | Renders this file at `/docs`. |
+| Tests | Vitest + Testing Library (jsdom) | `pnpm test`. Unit tests for pure modules; component tests for the log flow. |
 | Hosting (planned) | Vercel | |
 | Data | Supabase/Postgres via `@supabase/ssr` + `@supabase/supabase-js` | See [Supabase connection](#supabase-connection). |
 
@@ -88,6 +89,38 @@ Checked at 320, 390, 768, 1024, 1280 and 1440 with no horizontal scroll.
 
 **Effects** that would be unreadable as Tailwind arbitrary values are named utilities in `globals.css`: `ticket-mask`, `can-ribs`, `can-lid`, `hatch`, `progress-stripes` and `stub-label`. They are declared with `@utility`, so responsive variants like `lg:can-lid` work.
 
+## Volunteer workspace
+
+`/volunteer` (dashboard: look up a student, see logs and totals, fix a log) and `/volunteer/log` (the entry flow). Frontend only for now; all data goes through a repository interface.
+
+```
+app/volunteer/          layout (guard stub, noindex, shell), dashboard page, log page
+components/volunteer/   workspace UI (all client components)
+lib/volunteer/
+  types.ts              Student, DonationLog, NewLog, LogPatch, ... (camelCase, id as string)
+  repository.ts         VolunteerRepository interface + SubmissionConflictError
+  mock-repository.ts    in-memory store, fake latency, failNextWrite(), reset()
+  supabase-repository.ts  stub; each method throws, with a TODO describing its query
+  index.ts              picks the implementation from NEXT_PUBLIC_VOLUNTEER_DATA_SOURCE
+  provider.tsx          context + hooks; UI never imports an implementation
+  search.ts, validation.ts, money.ts, time.ts, log-flow.ts   pure, unit-tested
+supabase/drafts/volunteer_workspace.sql   schema additions, not applied
+```
+
+**The repository seam.** Components call hooks (`useStudentSearch`, `useCreateLog`, …) that read the repository from context. Switching `NEXT_PUBLIC_VOLUNTEER_DATA_SOURCE` from `mock` (default) to `supabase` swaps the implementation without UI changes. There is no data-fetching library: a `revision` counter in the provider is bumped after every successful write, and every query refetches when it changes. That is enough for one volunteer screen at a time and avoids a dependency.
+
+**Edits are direct overwrites.** The owner decided volunteers fix a log by editing it in place: no correction reason, no history UI, no void/reversal rows. `donation_logs` gains an `updated_at` (draft migration) so an edit is at least visible as recent. Totals are always sums of logs, never stored, so an edit changes every total consistently. Logs are never deleted; the planned RLS has no delete policy.
+
+**Retry-safe creates.** Every entry gets a client-generated UUID when the student is picked. It is reused on "Try again" and becomes `donation_logs.transaction_id`, the primary key. A retry after a lost response therefore hits the same key: same payload returns the existing row, a different payload is rejected (`SubmissionConflictError`). A disabled button can't cover a response lost in transit; the key can. The mock implements the same rule, with tests.
+
+**Search.** Exact matches are word-prefix matches on the normalized name (lowercase, no accents or apostrophes). Near spellings (edit distance, max 4, only for queries of 4+ characters) are shown under "Similar spelling", identical names get a "Same name" chip, and the confirm block lists lookalikes in the school. The mock runs this in the browser; the Supabase version is meant to be a `pg_trgm` RPC.
+
+**Log flow state** is one reducer (`idle | saving | failed | saved`). While saving, every other action is ignored, and a ref guards against two saves starting in one render. A failure keeps every value and focuses "Try saving again"; success only shows once the write resolves.
+
+**Privacy.** Seed data is fictional. Student names only exist in `/volunteer` bundles (checked: the homepage's chunks contain none). The layout sets `robots: noindex, nofollow`. The guard (`lib/volunteer/guard.ts`) is a stub: it lets everyone in with mock data and redirects everyone away with the Supabase data source until auth exists.
+
+**Times** display in `America/Toronto`; "Today" means the Toronto calendar day.
+
 ## Supabase connection
 
 | File | Key | RLS | Use |
@@ -134,7 +167,7 @@ The cash split (`~27%`) and the “$1 = 1 can” wording are demo placeholders. 
 
 ## Deliberately not built yet
 
-- Backend, auth, volunteer entry and reservations. The homepage is frontend-only.
+- Backend, auth and reservations. The homepage and volunteer workspace are frontend-only.
 - The design-tool runtime (`support.js`).
 - Dark mode (see Visual system).
 
@@ -143,7 +176,8 @@ The cash split (`~27%`) and the “$1 = 1 can” wording are demo placeholders. 
 | Item | Needed from | Notes |
 | --- | --- | --- |
 | School logo and branding | Owner | Dashed “SCHOOL LOGO” placeholders in the header and footer. |
-| Volunteer login route | Build | The link is `#`. It depends on the account-strategy decision in `CLAUDE.md`. |
+| Volunteer login | Build | "Volunteer login" now links to `/volunteer`, which is guarded by a stub. Real login depends on the account-strategy decision in `CLAUDE.md`. |
+| Supabase volunteer repository | Build | Implement `supabase-repository.ts`, promote `supabase/drafts/volunteer_workspace.sql` into a migration, add the volunteer RLS policies. |
 | “Choose a collection area” flow | Owner + build | The link is `#`. The area model and booking rule are undecided, and the grid is a schematic placeholder. |
 | Incentive rules | Organizers | Dates, cutoffs, ties, dodgeball qualification order, and cash treatment. |
 | Public donor names | Owner | The page shows “First L.” names (fictional). How real names appear publicly is a privacy decision. |

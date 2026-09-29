@@ -13,21 +13,21 @@
 ## Repository orientation
 
 - Before editing, inspect the relevant code, package scripts, lockfile, migrations, and existing tests. Follow the repository's actual conventions and installed versions.
-- Current state: Next.js 16 / React 19 / Tailwind v4 app (pnpm). The public homepage frontend is built on demo data. The app is connected to Supabase project `gcrfsdmkcfywkofhijsi`, which holds `students` (the real roster) and `donation_logs`. Both tables have RLS enabled and no policies, so they are server-only. There is no auth or API yet.
+- Current state: Next.js 16 / React 19 / Tailwind v4 app (pnpm). The public homepage frontend is built on demo data. The volunteer workspace (`/volunteer`, `/volunteer/log`) is built on an in-memory mock behind `VolunteerRepository` (`lib/volunteer/`); `NEXT_PUBLIC_VOLUNTEER_DATA_SOURCE=supabase` switches to the (not yet implemented) Supabase repository. The app is connected to Supabase project `gcrfsdmkcfywkofhijsi`, which holds `students` (the real roster) and `donation_logs`. Both tables have RLS enabled and no policies, so they are server-only. There is no auth or API yet.
 - Supabase: use `@supabase/ssr` + `@supabase/supabase-js`. Use `lib/supabase/server.ts` for request-scoped clients (RLS applies), `lib/supabase/client.ts` for the browser, and `lib/supabase/admin.ts` only in server code that checks authorization itself (it bypasses RLS). `proxy.ts` refreshes the session cookie. Env vars live in `.env`: `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`, `SUPABASE_SECRET_KEY`.
-- Migrations live in `supabase/migrations` (Supabase CLI via `pnpm exec supabase`). The baseline migration mirrors the schema that was created by hand on the remote project. Regenerate `lib/supabase/database.types.ts` after schema changes.
+- Migrations live in `supabase/migrations` (Supabase CLI via `pnpm exec supabase`). The baseline migration mirrors the schema that was created by hand on the remote project. Unapplied schema drafts live in `supabase/drafts/` so `db push` cannot pick them up. Regenerate `lib/supabase/database.types.ts` after schema changes.
 - Architecture and design decisions live in `docs/architecture.md`, which is rendered at `/docs`. Update it when a decision changes.
 - `notes/` holds the owner's learning notes on the general computer science behind the app (trust boundaries, sessions/JWTs, RLS, migrations, Docker). Keep them framework-agnostic and update them when a change makes one inaccurate.
 - Recommended architecture: a focused Next.js/TypeScript application with Supabase/Postgres and Vercel hosting. Keep this school's Supabase project separate from Lemma. Do not migrate an existing stack merely to match this recommendation.
 - Discover development, lint, typecheck, test, and build commands from the repository; do not invent scripts or claim unrun commands passed. Once verified, record the useful commands here.
-- Verified commands: `pnpm dev`, `pnpm lint`, `pnpm build`, and `pnpm exec tsc --noEmit`. Run tsc after a build or `next typegen`, because `LayoutProps`/`PageProps` are generated types. There is no test runner yet.
+- Verified commands: `pnpm dev`, `pnpm lint`, `pnpm build`, `pnpm test` (Vitest), and `pnpm exec tsc --noEmit`. Run tsc after a build or `next typegen`, because `LayoutProps`/`PageProps` are generated types.
 - Check current official documentation when using unfamiliar or version-sensitive framework, authentication, database, or deployment APIs. Use relevant installed skills selectively.
 
 ## Frontend conventions
 
 - Design tokens (colours and fonts) are defined once in `app/globals.css` under `@theme`. Use the token classes (`bg-ink`, `text-tomato`, `font-display`) instead of raw hex values. Multi-stop effects are named `@utility` classes in the same file.
 - The homepage is one responsive component tree, not separate mobile and desktop pages. Base styles follow the 390 design, `lg` is the desktop header and type, and `xl` is the side-by-side section layouts.
-- Components are server components by default. Only interactive sections (`site-header`, `standings`, `zone-map`) are client components. Keep shared constants in `lib/`, not in `"use client"` modules.
+- Components are server components by default. On the homepage only interactive sections (`site-header`, `standings`, `zone-map`) are client components; the volunteer workspace UI (`components/volunteer/`) is client-side and gets data only through the hooks in `lib/volunteer/provider.tsx`, never by importing a repository implementation. Keep shared constants in `lib/`, not in `"use client"` modules.
 - All homepage figures come from `lib/demo-data.ts`. Replace it with aggregate-only server queries that return the same shapes; do not send private rows to client components.
 
 ## Donation workflow and user experience
@@ -36,7 +36,7 @@
 - Support keyboard use, clear focus, visible saving/error states, and quick repeated entry. Keep the entered values available after failures and show success only after the write is confirmed.
 - Distinguish students with identical names using homeroom/grade and internal ID. Never treat a name as a unique identifier.
 - Prevent duplicate credit from double clicks, retries, and lost responses. Disabling the submit button alone is insufficient; use a stable submission identifier and a database uniqueness guarantee. Reuse the identifier on retry and reject conflicting payloads.
-- Corrections must leave an auditable history and adjust all totals consistently. Choose an explicit correction/void/reversal model before implementing edits; do not silently delete donation history or overwrite a student's total.
+- Corrections are direct overwrites of a log (owner's decision): no correction reason, no history UI. Totals are always computed from logs, so edits adjust every total consistently. Never delete donation logs, and never store or edit a student's total.
 - Public pages should make school progress, homeroom standings, and approved incentives easy to understand. Design responsively with accessible labels, contrast, focus states, and readable errors. Use supplied branding when available.
 
 ## Data rules
