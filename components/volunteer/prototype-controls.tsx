@@ -1,6 +1,5 @@
 "use client";
 
-import { DATA_SOURCE } from "@/lib/volunteer";
 import { useMockControls } from "@/lib/volunteer/provider";
 import { MONO_LABEL } from "@/lib/volunteer/ui";
 
@@ -17,11 +16,7 @@ export function PrototypeControls() {
         className="flex flex-wrap items-center gap-3 border-2 border-dashed border-muted px-4 py-3 text-[13px] text-muted"
       >
         <p className={MONO_LABEL}>Prototype controls</p>
-        <p className="mr-auto">
-          {DATA_SOURCE === "supabase"
-            ? "Real student roster. Donation logs stay in this tab only and are never saved to the database."
-            : "Mock data in this tab only. Nothing is sent to a database."}
-        </p>
+        <p className="mr-auto">Mock data in this tab only. Nothing is sent to a database.</p>
         <button
           type="button"
           aria-pressed={mock.failNextWrite}

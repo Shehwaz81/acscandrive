@@ -1,14 +1,13 @@
 import { MockVolunteerRepository } from "./mock-repository";
 import type { MockControls, VolunteerRepository } from "./repository";
-import { RosterDirectory } from "./roster-directory";
+import { SupabaseVolunteerRepository } from "./supabase-repository";
 
 export type DataSource = "mock" | "supabase";
 
 /**
  * mock:     fictional seed students and seeded logs, all in memory.
- * supabase: the real `students` table for search and lookup; logs are still
- *           kept in memory (nothing is written to donation_logs yet). The full
- *           SupabaseVolunteerRepository replaces this once logs are connected.
+ * supabase: the real `students` and `donation_logs` tables, through the
+ *           workspace's route handlers.
  */
 export const DATA_SOURCE: DataSource =
   process.env.NEXT_PUBLIC_VOLUNTEER_DATA_SOURCE === "supabase" ? "supabase" : "mock";
@@ -16,8 +15,7 @@ export const DATA_SOURCE: DataSource =
 export function createRepository(
   source: DataSource = DATA_SOURCE,
 ): { repo: VolunteerRepository; mock: MockControls | null } {
-  const mock = new MockVolunteerRepository(
-    source === "supabase" ? { directory: new RosterDirectory() } : {},
-  );
+  if (source === "supabase") return { repo: new SupabaseVolunteerRepository(), mock: null };
+  const mock = new MockVolunteerRepository();
   return { repo: mock, mock };
 }
