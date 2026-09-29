@@ -221,7 +221,7 @@ function LogEditor({ log, onClose, onSaved }: Props) {
           <button type="button" onClick={onClose} disabled={saving} className={BTN_SECONDARY}>
             Cancel
           </button>
-          <p className="text-[13px] text-muted max-lg:hidden">Enter saves · Esc cancels · $ or C switches method</p>
+          <p className="text-[13px] text-muted max-md:hidden">Enter saves · Esc cancels · $ or C switches method</p>
         </div>
       </div>
     </div>
