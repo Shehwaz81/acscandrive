@@ -69,3 +69,37 @@ describe("MockVolunteerRepository", () => {
     expect(recent[0].student.id).toBe(recent[0].studentId);
   });
 });
+
+describe("MockVolunteerRepository with an injected roster", () => {
+  const real = { id: "901", firstName: "Test", lastName: "Person", grade: 10 as const, homeroom: "P13(B)" };
+  const directory = {
+    search: async () => ({ exact: [real], exactTotal: 1, similar: [] }),
+    get: async (id: string) => (id === real.id ? real : null),
+  };
+  const make = () =>
+    new MockVolunteerRepository({ latency: { read: [0, 0], write: [0, 0] }, directory });
+
+  it("starts with no logs and no seed students", async () => {
+    const repo = make();
+    expect(await repo.listRecentLogs(10)).toEqual([]);
+    expect(await repo.getStudent("s01")).toBeNull();
+  });
+
+  it("logs against roster students and lists them with their details", async () => {
+    const repo = make();
+    await repo.createLog({ id: ID, studentId: "901", method: "cans", cans: 4 });
+    const [recent] = await repo.listRecentLogs(10);
+    expect(recent.student).toEqual(real);
+    await expect(
+      repo.createLog({ id: "00000000-0000-4000-8000-000000000002", studentId: "902", method: "cans", cans: 1 }),
+    ).rejects.toThrow("Unknown student");
+  });
+
+  it("reset clears logs but keeps using the roster", async () => {
+    const repo = make();
+    await repo.createLog({ id: ID, studentId: "901", method: "cans", cans: 4 });
+    repo.reset();
+    expect(await repo.listRecentLogs(10)).toEqual([]);
+    expect((await repo.searchStudents("test")).exact).toEqual([real]);
+  });
+});

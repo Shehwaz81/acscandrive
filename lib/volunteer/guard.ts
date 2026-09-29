@@ -1,20 +1,20 @@
 import "server-only";
-import { redirect } from "next/navigation";
-import { DATA_SOURCE } from "./index";
 
 /**
  * Protected-area check for /volunteer. STUB: there is no login yet.
  *
- * With mock data there is nothing private to protect, so everyone is let in.
- * With the Supabase data source the stub refuses everyone rather than expose
- * real student names.
+ * AUTH TODO — MERGE BLOCKER: this currently lets everyone in, including with
+ * the Supabase data source, where the workspace searches the REAL roster
+ * (app/api/volunteer/students). The owner chose to connect the roster first
+ * and add volunteer login before merging. Before merge:
  *
- * TODO(auth): create a request-scoped client (lib/supabase/server.ts), call
- * supabase.auth.getClaims(), and allow only a user whose claims carry the
- * volunteer role; otherwise redirect to the login page. Being signed in is not
- * enough, and RLS must enforce the same rule for every query.
+ *   - create a request-scoped client (lib/supabase/server.ts), call
+ *     supabase.auth.getClaims(), and allow only a user whose app_metadata
+ *     carries the volunteer role; otherwise redirect to the login page;
+ *   - make the same check at the top of every route handler under
+ *     app/api/volunteer/ (they are reachable directly, not only via this page);
+ *   - add the RLS policies drafted in supabase/drafts/volunteer_workspace.sql.
+ *
+ * Being signed in is not enough, and hiding the UI is not access control.
  */
-export async function requireVolunteer(): Promise<void> {
-  if (DATA_SOURCE === "mock") return;
-  redirect("/");
-}
+export async function requireVolunteer(): Promise<void> {}
