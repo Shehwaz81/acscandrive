@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState, type ReactNode } from "react";
-import { LogoPlaceholder } from "@/components/marks";
+import { SchoolLogo } from "@/components/marks";
 import { NAV_LINKS, VOLUNTEER_LOGIN_HREF } from "@/lib/site";
 
 /** Nav breakpoint: the homepage collapses below lg; the volunteer desk keeps nav on tablets. */
@@ -40,7 +40,7 @@ export function SiteHeader({
     <header className="relative z-20 border-b-2 border-ink bg-paper">
       <div className="mx-auto flex h-16 max-w-[1440px] items-center gap-3 pr-4 pl-5 lg:h-[76px] lg:gap-10 lg:px-16">
         <a href={homeHref} className="flex items-center gap-3 no-underline lg:gap-3.5">
-          <LogoPlaceholder className="size-[38px] border-muted text-[6.5px] text-muted lg:size-[46px] lg:text-[7.5px]" />
+          <SchoolLogo className="size-[38px] lg:size-[46px]" />
           <span className="flex flex-col leading-none">
             <span className="text-[9.5px] font-semibold tracking-[.14em] text-muted lg:text-[11px]">
               ASSUMPTION
