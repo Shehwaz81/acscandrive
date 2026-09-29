@@ -1,5 +1,10 @@
 import { canEquivalents } from "./money";
-import { SubmissionConflictError, type MockControls, type VolunteerRepository } from "./repository";
+import {
+  SubmissionConflictError,
+  type MockControls,
+  type StudentDirectory,
+  type VolunteerRepository,
+} from "./repository";
 import { searchStudents } from "./search";
 import { seedLogs, seedStudents } from "./seed";
 import type { Amount, DonationLog, LogPatch, NewLog, Student } from "./types";
@@ -14,6 +19,11 @@ type Options = {
    */
   latency?: { read: Range; write: Range };
   now?: () => Date;
+  /**
+   * Where students come from. Omit for the fictional seed roster (with seeded
+   * logs); pass the real roster to test with real names and no logs.
+   */
+  directory?: StudentDirectory;
 };
 
 /** Mirrors the database's amount_matches_method check constraint. */
@@ -30,12 +40,31 @@ function amountFields(a: Amount): Pick<DonationLog, "method" | "cans" | "cashCen
 
 const byNewest = (a: DonationLog, b: DonationLog) => b.createdAt.localeCompare(a.createdAt);
 
+/** The fictional seed roster as a directory, searched in memory. */
+class SeedDirectory implements StudentDirectory {
+  readonly students = seedStudents();
+  constructor(private readonly delay: () => Promise<void>) {}
+  async search(query: string) {
+    await this.delay();
+    return structuredClone(searchStudents(this.students, query));
+  }
+  async get(id: string) {
+    await this.delay();
+    const s = this.students.find((s) => s.id === id);
+    return s ? { ...s } : null;
+  }
+}
+
 /**
- * In-memory repository for building the UI before the backend exists. State
- * lives in this browser tab and resets on reload.
+ * In-memory log store for building the UI before the backend exists. Logs
+ * live in this browser tab and reset on reload. Students come from a
+ * `StudentDirectory`: the seed roster by default, or the real one.
  */
 export class MockVolunteerRepository implements VolunteerRepository, MockControls {
-  private students: Student[] = [];
+  private readonly directory: StudentDirectory;
+  private readonly seed: SeedDirectory | null;
+  /** Every student seen so far, so logs can be listed with their student. */
+  private known = new Map<string, Student>();
   private logs = new Map<string, DonationLog>();
   private failNext = false;
   private readonly latency: { read: Range; write: Range };
@@ -44,13 +73,31 @@ export class MockVolunteerRepository implements VolunteerRepository, MockControl
   constructor(options: Options = {}) {
     this.latency = options.latency ?? { read: [150, 300], write: [600, 900] };
     this.now = options.now ?? (() => new Date());
+    this.seed = options.directory ? null : new SeedDirectory(() => this.delay());
+    this.directory = options.directory ?? this.seed!;
     this.reset();
   }
 
   reset() {
-    this.students = seedStudents();
-    this.logs = new Map(seedLogs(this.students, this.now()).map((l) => [l.id, l]));
+    this.known = new Map();
+    this.logs = new Map();
+    if (this.seed) {
+      for (const s of this.seed.students) this.known.set(s.id, { ...s });
+      for (const l of seedLogs(this.seed.students, this.now())) this.logs.set(l.id, l);
+    }
     this.failNext = false;
+  }
+
+  private remember(students: Student[]) {
+    for (const s of students) this.known.set(s.id, { ...s });
+  }
+
+  private async lookup(id: string): Promise<Student | null> {
+    const cached = this.known.get(id);
+    if (cached) return { ...cached };
+    const s = await this.directory.get(id);
+    if (s) this.remember([s]);
+    return s;
   }
 
   setFailNextWrite(on: boolean) {
@@ -75,14 +122,13 @@ export class MockVolunteerRepository implements VolunteerRepository, MockControl
   }
 
   async searchStudents(query: string) {
-    await this.delay();
-    return structuredClone(searchStudents(this.students, query));
+    const result = await this.directory.search(query);
+    this.remember([...result.exact, ...result.similar]);
+    return result;
   }
 
   async getStudent(id: string) {
-    await this.delay();
-    const s = this.students.find((s) => s.id === id);
-    return s ? { ...s } : null;
+    return this.lookup(id);
   }
 
   async listLogsForStudent(studentId: string) {
@@ -95,10 +141,14 @@ export class MockVolunteerRepository implements VolunteerRepository, MockControl
 
   async listRecentLogs(limit: number) {
     await this.delay();
-    return [...this.logs.values()]
-      .sort(byNewest)
-      .slice(0, limit)
-      .map((l) => ({ ...l, student: { ...this.students.find((s) => s.id === l.studentId)! } }));
+    const recent = [...this.logs.values()].sort(byNewest).slice(0, limit);
+    const withStudents = await Promise.all(
+      recent.map(async (l) => {
+        const student = await this.lookup(l.studentId);
+        return student ? { ...l, student } : null;
+      }),
+    );
+    return withStudents.filter((l) => l !== null);
   }
 
   async getTotals(studentId: string) {
@@ -131,7 +181,7 @@ export class MockVolunteerRepository implements VolunteerRepository, MockControl
       return { ...existing };
     }
 
-    if (!this.students.some((s) => s.id === input.studentId)) {
+    if (!(await this.lookup(input.studentId))) {
       throw new Error(`Unknown student ${input.studentId}`);
     }
     const at = this.now().toISOString();

@@ -90,8 +90,11 @@ function useRepoQuery<T>(
   key: string | null,
   fn: (repo: VolunteerRepository) => Promise<T>,
   { keepPrevious = false } = {},
-): QueryState<T> & { dataKey: string | null } {
+): QueryState<T> & { dataKey: string | null; retry: () => void } {
   const { repo, revision } = useRepoContext();
+  // Bumped by retry() to refetch the same key after a failure.
+  const [attempt, setAttempt] = useState(0);
+  const retry = useCallback(() => setAttempt((a) => a + 1), []);
   const fnRef = useRef(fn);
   useEffect(() => {
     fnRef.current = fn;
@@ -103,34 +106,36 @@ function useRepoQuery<T>(
     error: Error | null;
   }>({ key: null, stamp: null, data: undefined, error: null });
 
-  const stamp = key === null ? null : `${key}#${revision}`;
+  const stamp = key === null ? null : `${key}#${revision}#${attempt}`;
 
   useEffect(() => {
     if (key === null) return;
     let cancelled = false;
     fnRef.current(repo).then(
-      (data) => !cancelled && setState({ key, stamp: `${key}#${revision}`, data, error: null }),
+      (data) => !cancelled && setState({ key, stamp: `${key}#${revision}#${attempt}`, data, error: null }),
+      // Drop old data: it answered a different key and must not pass for this one.
       (error: unknown) =>
         !cancelled &&
-        setState((s) => ({
-          ...s,
+        setState({
           key,
-          stamp: `${key}#${revision}`,
+          stamp: `${key}#${revision}#${attempt}`,
+          data: undefined,
           error: error instanceof Error ? error : new Error(String(error)),
-        })),
+        }),
     );
     return () => {
       cancelled = true;
     };
-  }, [key, revision, repo]);
+  }, [key, revision, attempt, repo]);
 
-  if (key === null) return { data: undefined, error: null, loading: false, dataKey: null };
+  if (key === null) return { data: undefined, error: null, loading: false, dataKey: null, retry };
   const sameKey = state.key === key;
   return {
     data: sameKey || keepPrevious ? state.data : undefined,
     dataKey: sameKey || keepPrevious ? state.key : null,
     error: sameKey ? state.error : null,
     loading: state.stamp !== stamp,
+    retry,
   };
 }
 

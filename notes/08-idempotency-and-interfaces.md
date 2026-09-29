@@ -46,6 +46,8 @@ Two things implement it:
 
 A configuration value picks one at startup. The UI can't tell the difference.
 
+Seams can be split further. This app has a separate one for *students* (`StudentDirectory`: search, get). That's how it runs the **real** roster with **in-memory** logs: the log store stays the mock, and only the student source is swapped. Smaller seams let you connect a real backend one piece at a time.
+
 Why bother:
 
 - **Build the UI before the backend exists.** The mock is enough to design every screen state.

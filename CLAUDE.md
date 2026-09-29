@@ -13,8 +13,8 @@
 ## Repository orientation
 
 - Before editing, inspect the relevant code, package scripts, lockfile, migrations, and existing tests. Follow the repository's actual conventions and installed versions.
-- Current state: Next.js 16 / React 19 / Tailwind v4 app (pnpm). The public homepage frontend is built on demo data. The volunteer workspace (`/volunteer`, `/volunteer/log`) is built on an in-memory mock behind `VolunteerRepository` (`lib/volunteer/`); `NEXT_PUBLIC_VOLUNTEER_DATA_SOURCE=supabase` switches to the (not yet implemented) Supabase repository. The app is connected to Supabase project `gcrfsdmkcfywkofhijsi`, which holds `students` (the real roster) and `donation_logs`. Both tables have RLS enabled and no policies, so they are server-only. There is no auth or API yet.
-- Supabase: use `@supabase/ssr` + `@supabase/supabase-js`. Use `lib/supabase/server.ts` for request-scoped clients (RLS applies), `lib/supabase/client.ts` for the browser, and `lib/supabase/admin.ts` only in server code that checks authorization itself (it bypasses RLS). `proxy.ts` refreshes the session cookie. Env vars live in `.env`: `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`, `SUPABASE_SECRET_KEY`.
+- Current state: Next.js 16 / React 19 / Tailwind v4 app (pnpm). The public homepage frontend is built on demo data. The volunteer workspace (`/volunteer`, `/volunteer/log`) runs behind `VolunteerRepository` (`lib/volunteer/`). With `NEXT_PUBLIC_VOLUNTEER_DATA_SOURCE=supabase` it searches the real `students` table through `app/api/volunteer/students` while donation logs stay in browser memory; with `mock` (default) everything is fictional. `/volunteer` and those routes require an admin login (see Volunteer login below). The app is connected to Supabase project `gcrfsdmkcfywkofhijsi`, which holds `students` (the real roster), `donation_logs` and `admin` (volunteer logins). All three have RLS enabled and no policies, so they are server-only.
+- Supabase: use `@supabase/ssr` + `@supabase/supabase-js`. Use `lib/supabase/server.ts` for request-scoped clients (RLS applies), `lib/supabase/client.ts` for the browser, and `lib/supabase/admin.ts` only in server code that checks authorization itself (it bypasses RLS). `proxy.ts` refreshes the session cookie. Env vars live in `.env`: `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`, `SUPABASE_SECRET_KEY`, `SESSION_SECRET`.
 - Migrations live in `supabase/migrations` (Supabase CLI via `pnpm exec supabase`). The baseline migration mirrors the schema that was created by hand on the remote project. Unapplied schema drafts live in `supabase/drafts/` so `db push` cannot pick them up. Regenerate `lib/supabase/database.types.ts` after schema changes.
 - Architecture and design decisions live in `docs/architecture.md`, which is rendered at `/docs`. Update it when a decision changes.
 - `notes/` holds the owner's learning notes on the general computer science behind the app (trust boundaries, sessions/JWTs, RLS, migrations, Docker). Keep them framework-agnostic and update them when a change makes one inaccurate.
@@ -63,9 +63,23 @@
 ## Access and privacy
 
 - Students do not need accounts. Trusted volunteers and organizers need protected access; the owner decides who receives it.
-- The owner's stated preference is a shared volunteer account. Account strategy remains open: explain its accountability/revocation limits when implementing auth and avoid silently introducing a larger account-management system. A shared login cannot identify which volunteer performed an action.
+- The owner's stated preference is a shared volunteer account. Avoid silently introducing a larger account-management system. A shared login cannot identify which volunteer performed an action.
 - Verify authorization at every protected server/database entry point. Being signed in alone must not confer volunteer or organizer privileges. UI visibility is not access control.
 - Enable RLS on tables in exposed Supabase schemas and make grants/policies match the intended roles. Keep secret/service-role keys server-side. Privileged server code must enforce authorization explicitly.
+
+### Volunteer login
+
+Simple admin login, deliberately without Supabase Auth or an auth library. Details and tradeoffs: `docs/architecture.md` (Volunteer login) and `notes/10-password-login.md`.
+
+- `public.admin` (`username`, bcrypt `password_hash`) is the list of people allowed into `/volunteer`. There are no roles: every row is a full volunteer/admin.
+- `/login` → server action `login()` (`app/login/actions.ts`) → `verify_admin(username, password)` via the admin client. Only `service_role` may execute it. On success it sets `volunteer_session`, an HMAC-signed, `HttpOnly` cookie lasting 12h (`lib/auth/`).
+- **Every entry point checks for itself:** pages and layouts use `requireVolunteer()` (`lib/volunteer/guard.ts`, redirects to `/login`). Route handlers and server actions touching volunteer data use `getVolunteer()`/`requireVolunteer()` at the top (routes return 401). A layout check does not protect actions or API routes.
+- `SESSION_SECRET` (32+ characters, `openssl rand -base64 32`) must be set in `.env` and in Vercel. Rotating it signs everyone out. Without it, auth throws (fails closed).
+- Manage admins in the Supabase SQL editor. Usernames are lowercase `a-z 0-9 _ -`, 3 to 40 characters:
+  - Add: `insert into public.admin (username, password_hash) values ('desk', extensions.crypt('long-password', extensions.gen_salt('bf', 12)));`
+  - Change password: `update public.admin set password_hash = extensions.crypt('new-password', extensions.gen_salt('bf', 12)) where username = 'desk';`
+  - Remove: `delete from public.admin where username = 'desk';`. Existing sessions last until they expire (≤12h); rotate `SESSION_SECRET` to cut them off now.
+- Known limits: no rate limiting or lockout (use long passwords), no per-volunteer accountability with a shared login, no reset UI.
 - Individual student records and donation histories are private. Public responses should expose only intended aggregates and reservation availability. Do not send private rows to the browser and hide them in the UI.
 - Verify views/functions and aggregate endpoints do not create a path to private records. Keep reservation contact details and edit credentials out of public responses.
 

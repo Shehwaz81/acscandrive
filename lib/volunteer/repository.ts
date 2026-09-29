@@ -27,6 +27,15 @@ export interface VolunteerRepository {
   updateLog(id: string, patch: LogPatch): Promise<DonationLog>;
 }
 
+/**
+ * Where students come from, separate from where logs are kept, so the real
+ * roster can be searched while logs are still held in memory.
+ */
+export interface StudentDirectory {
+  search(query: string): Promise<StudentSearchResult>;
+  get(id: string): Promise<Student | null>;
+}
+
 /** Test/prototype hooks, only offered by the mock. */
 export interface MockControls {
   /** While on, the next write fails (and records nothing), then turns off. */

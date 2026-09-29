@@ -31,7 +31,9 @@ export function StudentSearch({
   const trimmed = query.trim();
   const result = trimmed && search.data ? search.data : null;
   const options = result ? [...result.exact, ...result.similar] : [];
-  const noResults = search.current && options.length === 0;
+  const failed = !!trimmed && !!search.error && !search.loading;
+  // Only a successful answer can say "no match"; a failed request says so instead.
+  const noResults = search.current && !search.error && !!result && options.length === 0;
   const open = options.length > 0;
   const active = options.find((s) => s.id === highlightedId) ?? options[0] ?? null;
 
@@ -61,10 +63,14 @@ export function StudentSearch({
 
   const status = !trimmed
     ? ""
-    : noResults
+    : failed
+      ? ""
+      : noResults
       ? `No student matches ${trimmed}.`
       : search.current && result
-        ? `${result.exact.length} matches, ${result.similar.length} similar.`
+        ? `${result.exactTotal} matches${
+            result.exactTotal > result.exact.length ? `, first ${result.exact.length} shown` : ""
+          }, ${result.similar.length} similar.`
         : "";
 
   return (
@@ -132,6 +138,22 @@ export function StudentSearch({
         <p className="border-2 border-t-0 border-ink bg-field px-4 py-3 text-[14px] text-muted">
           Searching…
         </p>
+      )}
+      {failed && (
+        <div role="alert" className="border-2 border-t-0 border-tomato bg-error-surface px-4 py-4 text-[15px]">
+          <p className="font-bold">Search isn’t working right now.</p>
+          <p className="mt-1 text-body">
+            Check the connection and search again. If it keeps failing, write the student’s name and homeroom on
+            paper for the drive organizer.
+          </p>
+          <button
+            type="button"
+            onClick={search.retry}
+            className="mt-2.5 min-h-11 border-2 border-ink bg-field px-4 font-bold hover:bg-ink hover:text-paper"
+          >
+            Search again
+          </button>
+        </div>
       )}
       {noResults && (
         <div className="border-2 border-t-0 border-ink bg-field px-4 py-4 text-[15px]">

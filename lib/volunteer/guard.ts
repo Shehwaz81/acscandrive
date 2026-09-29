@@ -1,20 +1,17 @@
 import "server-only";
 import { redirect } from "next/navigation";
-import { DATA_SOURCE } from "./index";
+import { getVolunteer } from "@/lib/auth/session";
 
 /**
- * Protected-area check for /volunteer. STUB: there is no login yet.
+ * Protected-area check for /volunteer: only a signed-in admin (a row in
+ * public.admin) gets through. Returns their username.
  *
- * With mock data there is nothing private to protect, so everyone is let in.
- * With the Supabase data source the stub refuses everyone rather than expose
- * real student names.
- *
- * TODO(auth): create a request-scoped client (lib/supabase/server.ts), call
- * supabase.auth.getClaims(), and allow only a user whose claims carry the
- * volunteer role; otherwise redirect to the login page. Being signed in is not
- * enough, and RLS must enforce the same rule for every query.
+ * Call it in every server action and route handler that reads or writes
+ * volunteer data, not just the layout. A layout check doesn't protect actions,
+ * which can be called directly.
  */
-export async function requireVolunteer(): Promise<void> {
-  if (DATA_SOURCE === "mock") return;
-  redirect("/");
+export async function requireVolunteer(): Promise<string> {
+  const username = await getVolunteer();
+  if (!username) redirect("/login");
+  return username;
 }

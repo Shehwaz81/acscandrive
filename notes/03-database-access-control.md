@@ -40,7 +40,7 @@ Both tables have RLS enabled and **no policies**. So:
 
 - `anon` and `authenticated` can see and change nothing. The check in this session got `students`: 0 rows with the publishable key, and a rejected insert with SQL error code `42501` (insufficient privilege).
 - `service_role` (the secret key) sees all 1,113 students.
-- The Supabase security advisor flags "RLS enabled, no policy". Here that's intentional: until volunteer roles and public aggregates are designed, all data access goes through server code.
+- The Supabase security advisor flags "RLS enabled, no policy". Here that's intentional: all data access goes through server code, which checks the volunteer login itself (note 10). The `admin` table is the same: only the server's secret role may read it or call `verify_admin()`.
 
 This is **deny by default**, the safe starting point. You open access deliberately, one policy at a time, rather than forgetting to close it.
 

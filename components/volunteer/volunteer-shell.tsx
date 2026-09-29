@@ -2,14 +2,12 @@
 
 import { useRouter } from "next/navigation";
 import type { ReactNode } from "react";
+import { logout } from "@/app/login/actions";
 import { SiteHeader } from "@/components/home/site-header";
 import { RepositoryProvider } from "@/lib/volunteer/provider";
 import { PrototypeControls } from "./prototype-controls";
 import { useHotkeys } from "./use-hotkeys";
 import { WorkspaceTabs } from "./workspace-tabs";
-
-// TODO(auth): replace with a real sign-out action once login exists.
-const SIGN_OUT_HREF = "/";
 
 function Shortcuts() {
   const router = useRouter();
@@ -34,13 +32,20 @@ export function VolunteerShell({ children }: { children: ReactNode }) {
             <span aria-hidden className="hidden lg:inline">
               ·
             </span>
-            <a href={SIGN_OUT_HREF}>Sign out</a>
+            <form action={logout}>
+              <button type="submit" className="cursor-pointer underline decoration-2 underline-offset-[3px] hover:text-tomato">
+                Sign out
+              </button>
+            </form>
           </p>
         }
         menuAside={
-          <a href={SIGN_OUT_HREF} className="pt-4 pb-1 text-sm text-rule">
-            Volunteer desk · Sign out
-          </a>
+          <form action={logout} className="pt-4 pb-1 text-sm text-rule">
+            Volunteer desk ·{" "}
+            <button type="submit" className="cursor-pointer underline decoration-2 underline-offset-[3px] hover:text-tomato">
+              Sign out
+            </button>
+          </form>
         }
       />
       <WorkspaceTabs />
