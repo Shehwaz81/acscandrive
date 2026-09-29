@@ -16,5 +16,6 @@ Suggested reading order:
 8. [Idempotent writes and interfaces as seams](08-idempotency-and-interfaces.md). Why a retried save can't double-count, and why the UI talks to an interface instead of a database.
 9. [Serving private data through your own server](09-serving-private-data-through-your-server.md). How the volunteer search reads the real roster: public endpoints, sending the minimum, silent row limits, and "failed" vs "empty".
 10. [Password login from scratch](10-password-login.md). Hashes vs encryption, salts, why bcrypt is slow, signed cookies (HMAC), and why stateless sessions are hard to revoke.
+11. [Derived totals and database error codes](11-derived-totals-and-error-codes.md). Why totals are summed from rows instead of stored, and how Postgres errors (unique, foreign key, check) become HTTP 409/400/502.
 
 Never put real student names or donation records in these notes.
