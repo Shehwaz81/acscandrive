@@ -17,6 +17,27 @@ export type Database = {
   }
   public: {
     Tables: {
+      admin: {
+        Row: {
+          admin_id: number
+          created_at: string
+          password_hash: string
+          username: string
+        }
+        Insert: {
+          admin_id?: never
+          created_at?: string
+          password_hash: string
+          username: string
+        }
+        Update: {
+          admin_id?: never
+          created_at?: string
+          password_hash?: string
+          username?: string
+        }
+        Relationships: []
+      }
       donation_logs: {
         Row: {
           amount_cents: number | null
@@ -87,7 +108,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      verify_admin: {
+        Args: { p_password: string; p_username: string }
+        Returns: boolean
+      }
     }
     Enums: {
       [_ in never]: never
