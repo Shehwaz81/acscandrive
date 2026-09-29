@@ -14,5 +14,6 @@ Suggested reading order:
 6. [Migrations](06-migrations.md). Treating a database schema as code.
 7. [Docker](07-docker.md). What containers are and why the Supabase CLI wants them.
 8. [Idempotent writes and interfaces as seams](08-idempotency-and-interfaces.md). Why a retried save can't double-count, and why the UI talks to an interface instead of a database.
+9. [Serving private data through your own server](09-serving-private-data-through-your-server.md). How the volunteer search reads the real roster: public endpoints, sending the minimum, silent row limits, and "failed" vs "empty".
 
 Never put real student names or donation records in these notes.

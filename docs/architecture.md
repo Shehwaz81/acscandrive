@@ -2,7 +2,9 @@
 
 This is the running record of how the Can Drive site is built and why. Update it when a decision changes. Business rules and data constraints live in `CLAUDE.md`. This file covers the technical and design choices made to satisfy them.
 
-_Last updated: 2026-09-28. Current scope: public homepage frontend with demo data, and the volunteer workspace (`/volunteer`) frontend on an in-memory mock. Supabase is connected (schema and roster only), and there is no auth or API yet._
+_Last updated: 2026-09-29. Current scope: public homepage frontend with demo data, and the volunteer workspace (`/volunteer`). The workspace searches the real `students` table; donation logs are still kept in browser memory. There is no auth yet._
+
+> **Merge blocker (branch `feat/roster-search`):** the roster routes and `/volunteer` have no login check. The owner will add volunteer auth before merging. See [Roster search](#roster-search-real-students).
 
 ## Stack
 
@@ -99,27 +101,56 @@ components/volunteer/   workspace UI (all client components)
 lib/volunteer/
   types.ts              Student, DonationLog, NewLog, LogPatch, ... (camelCase, id as string)
   repository.ts         VolunteerRepository interface + SubmissionConflictError
-  mock-repository.ts    in-memory store, fake latency, failNextWrite(), reset()
-  supabase-repository.ts  stub; each method throws, with a TODO describing its query
-  index.ts              picks the implementation from NEXT_PUBLIC_VOLUNTEER_DATA_SOURCE
+  mock-repository.ts    in-memory log store (fake latency, failNextWrite, reset); students from a StudentDirectory
+  roster-directory.ts   StudentDirectory that calls the roster routes below (browser side)
+  roster.server.ts      server-only: reads `students` with the admin client, in pages
+  supabase-repository.ts  stub for the full backend; each method has a TODO describing its query
+  index.ts              wires the repository from NEXT_PUBLIC_VOLUNTEER_DATA_SOURCE
+app/api/volunteer/students/        GET ?q=   → search results
+app/api/volunteer/students/[id]/   GET       → one student
   provider.tsx          context + hooks; UI never imports an implementation
   search.ts, validation.ts, money.ts, time.ts, log-flow.ts   pure, unit-tested
 supabase/drafts/volunteer_workspace.sql   schema additions, not applied
 ```
 
-**The repository seam.** Components call hooks (`useStudentSearch`, `useCreateLog`, …) that read the repository from context. Switching `NEXT_PUBLIC_VOLUNTEER_DATA_SOURCE` from `mock` (default) to `supabase` swaps the implementation without UI changes. There is no data-fetching library: a `revision` counter in the provider is bumped after every successful write, and every query refetches when it changes. That is enough for one volunteer screen at a time and avoids a dependency.
+**The repository seam.** Components call hooks (`useStudentSearch`, `useCreateLog`, …) that read the repository from context. `NEXT_PUBLIC_VOLUNTEER_DATA_SOURCE` picks the data without UI changes:
+
+| Value | Students | Logs |
+| --- | --- | --- |
+| `mock` (default) | 30 fictional seed students | Seeded, in memory |
+| `supabase` (set in `.env` locally) | Real `students` table | Empty at start, in memory; nothing is written to `donation_logs` yet |
+
+Students and logs are separate seams: `StudentDirectory` (search, get) supplies students to the in-memory log store. That is what lets the real roster run before logs are connected. When `donation_logs` is wired up, `SupabaseVolunteerRepository` replaces the log store. There is no data-fetching library: a `revision` counter in the provider is bumped after every successful write, and every query refetches when it changes. That is enough for one volunteer screen at a time and avoids a dependency.
 
 **Edits are direct overwrites.** The owner decided volunteers fix a log by editing it in place: no correction reason, no history UI, no void/reversal rows. `donation_logs` gains an `updated_at` (draft migration) so an edit is at least visible as recent. Totals are always sums of logs, never stored, so an edit changes every total consistently. Logs are never deleted; the planned RLS has no delete policy.
 
 **Retry-safe creates.** Every entry gets a client-generated UUID when the student is picked. It is reused on "Try again" and becomes `donation_logs.transaction_id`, the primary key. A retry after a lost response therefore hits the same key: same payload returns the existing row, a different payload is rejected (`SubmissionConflictError`). A disabled button can't cover a response lost in transit; the key can. The mock implements the same rule, with tests.
 
-**Search.** Exact matches are word-prefix matches on the normalized name (lowercase, no accents or apostrophes). Near spellings (edit distance, max 4, only for queries of 4+ characters) are shown under "Similar spelling", identical names get a "Same name" chip, and the confirm block lists lookalikes in the school. The mock runs this in the browser; the Supabase version is meant to be a `pg_trgm` RPC.
+**Search.** Exact matches are word-prefix matches on the normalized name (lowercase, no accents or apostrophes). Near spellings (edit distance, max 4, only for queries of 4+ characters) are shown under "Similar spelling", identical names get a "Same name" chip, and the confirm block lists lookalikes in the school. The same function (`lib/volunteer/search.ts`) runs in the browser for seed data and on the server for the real roster. Exact matches are capped at 20 per response (`EXACT_LIMIT`), with the full count returned as `exactTotal` so the list can say "20 of 321 matches".
 
 **Log flow state** is one reducer (`idle | saving | failed | saved`). While saving, every other action is ignored, and a ref guards against two saves starting in one render. A failure keeps every value and focuses "Try saving again"; success only shows once the write resolves.
 
-**Privacy.** Seed data is fictional. Student names only exist in `/volunteer` bundles (checked: the homepage's chunks contain none). The layout sets `robots: noindex, nofollow`. The guard (`lib/volunteer/guard.ts`) is a stub: it lets everyone in with mock data and redirects everyone away with the Supabase data source until auth exists.
+**Privacy.** Seed data is fictional. Student names only exist in `/volunteer` bundles (checked: the homepage's chunks contain none). The layout sets `robots: noindex, nofollow`. The guard (`lib/volunteer/guard.ts`) is a stub that currently lets everyone in, for both data sources (see the merge blocker below).
 
 **Times** display in `America/Toronto`; "Today" means the Toronto calendar day.
+
+### Roster search (real students)
+
+How a name search reaches the database:
+
+```
+browser (StudentSearch, 150 ms debounce)
+  → RosterDirectory: GET /api/volunteer/students?q=…      (no-store)
+  → route handler → loadRoster() with the admin client     (server only, bypasses RLS)
+  → searchStudents(roster, q) → at most 20 exact + 4 similar, name/grade/homeroom only
+```
+
+- **Route handlers, not server actions.** Next.js runs server actions one at a time per browser, and its docs recommend route handlers for reads. Search-as-you-type needs independent GETs.
+- **Whole roster, then search in memory.** About 1,100 rows is small, so each request reads the table and runs the same rules as the mock. That needs no schema change (no `pg_trgm` yet). Revisit if the roster grows a lot or search feels slow.
+- **Paging gotcha.** Supabase's API returns at most 1,000 rows per request, and the roster has 1,113, so `loadRoster()` reads in pages of 1,000. Without this, 113 students would silently never appear. This is tested, and was checked live: the highest-id students are findable.
+- **Minimum data out.** `hr_teacher` is never selected. Responses carry only id, names, grade and homeroom, with `Cache-Control: private, no-store`.
+- **Failures are not "no match".** If the request fails, the search box says search isn't working and offers "Search again", and Enter can't pick from an older list. Showing "no student matches" on a network error could push a volunteer to log under someone else.
+- **Merge blocker: no auth.** Anyone who can reach the site can call these routes. Before merging, check for a signed-in volunteer in `requireVolunteer()` and at the top of both route handlers, and add the RLS policies from `supabase/drafts/volunteer_workspace.sql`. Until then, run it only locally: `pnpm dev -H 127.0.0.1` keeps it off the school network.
 
 ## Supabase connection
 
@@ -176,8 +207,8 @@ The cash split (`~27%`) and the “$1 = 1 can” wording are demo placeholders. 
 | Item | Needed from | Notes |
 | --- | --- | --- |
 | Branding | Owner | The Assumption College crest is in the header and footer. The tomato/butter palette is still not the school's colours. |
-| Volunteer login | Build | "Volunteer login" now links to `/volunteer`, which is guarded by a stub. Real login depends on the account-strategy decision in `CLAUDE.md`. |
-| Supabase volunteer repository | Build | Implement `supabase-repository.ts`, promote `supabase/drafts/volunteer_workspace.sql` into a migration, add the volunteer RLS policies. |
+| Volunteer login | Build | **Blocks merging `feat/roster-search`.** `/volunteer` and `/api/volunteer/*` have no access check while they serve real names. Real login depends on the account-strategy decision in `CLAUDE.md`. |
+| Donation logs in the database | Build | Students are real; logs are still in memory. Implement the log methods in `supabase-repository.ts`, promote `supabase/drafts/volunteer_workspace.sql` into a migration, add the volunteer RLS policies. |
 | “Choose a collection area” flow | Owner + build | The link is `#`. The area model and booking rule are undecided, and the grid is a schematic placeholder. |
 | Incentive rules | Organizers | Dates, cutoffs, ties, dodgeball qualification order, and cash treatment. |
 | Public donor names | Owner | The page shows “First L.” names (fictional). How real names appear publicly is a privacy decision. |
