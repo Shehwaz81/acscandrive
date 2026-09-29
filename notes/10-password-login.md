@@ -22,7 +22,20 @@ Two more ingredients make hashing safe for passwords:
 
 A bcrypt hash looks like `$2a$12$<22-char salt><31-char hash>`. The algorithm, cost and salt are stored inside the string itself. That's why checking needs only `crypt(attempt, stored_hash) = stored_hash`: `crypt` reads the salt and cost back out of the stored hash.
 
-In this app, Postgres does the hashing (the `pgcrypto` extension), and `verify_admin()` does the comparison inside the database. The table also rejects any `password_hash` that doesn't start with `$2`, which catches someone pasting a plaintext password by mistake.
+In this app, Postgres does the hashing (the `pgcrypto` extension). `add_admin()` hashes and stores a new admin's password, and `verify_admin()` does the comparison, both inside the database.
+
+Reading `extensions.crypt('pw', extensions.gen_salt('bf', 12))` from the inside out:
+
+1. `gen_salt('bf', 12)` makes a fresh random salt for bcrypt (`bf`, from Blowfish) at cost 12.
+2. `crypt(password, salt)` hashes the password with it.
+3. `extensions.` is the schema, a namespace like a folder, where Supabase installs add-on packages.
+
+## Why logic lives in database functions
+
+`CREATE FUNCTION` is standard SQL, and Postgres, SQL Server, MySQL and Oracle all support it (SQLite doesn't). Here, functions do two jobs:
+
+- **The API only exposes tables, views and functions.** Supabase's client can't send an arbitrary SQL string, so custom logic like "hash this attempt and compare" has to be a function the app calls by name (`rpc`).
+- **Permissions can be narrower than the table's.** A role can be allowed to *call* `verify_admin()` and get back only `true`/`false`, without being able to read the hashes. `add_admin()` is locked further: no API role may call it at all. The table also rejects any `password_hash` that doesn't start with `$2`, which catches someone pasting a plaintext password by mistake.
 
 ## Who may ask "is this password right?"
 

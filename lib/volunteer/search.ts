@@ -3,8 +3,8 @@ import type { Student, StudentSearchResult } from "./types";
 /**
  * Student name search: exact (prefix) matches plus near spellings, so a
  * volunteer notices "Maya Rodrigues" when they meant "Maya Rodriguez". The
- * mock runs this in the browser; the Supabase version will do the equivalent
- * in Postgres behind `searchStudents`.
+ * mock runs this in the browser; with the real roster the students route runs
+ * it on the server (app/api/volunteer/students).
  */
 
 export const SIMILAR_MIN_QUERY = 4;

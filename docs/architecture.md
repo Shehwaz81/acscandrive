@@ -92,7 +92,7 @@ Checked at 320, 390, 768, 1024, 1280 and 1440 with no horizontal scroll.
 
 ## Volunteer workspace
 
-`/volunteer` (dashboard: look up a student, see logs and totals, fix a log) and `/volunteer/log` (the entry flow). Frontend only for now; all data goes through a repository interface.
+`/volunteer` (dashboard: look up a student, see logs and totals, fix a log) and `/volunteer/log` (the entry flow). All data goes through a repository interface; with the `supabase` data source it reads and writes the real tables through route handlers.
 
 ```
 app/volunteer/          layout (login guard, noindex, shell), dashboard page, log page
@@ -103,10 +103,13 @@ lib/volunteer/
   mock-repository.ts    in-memory log store (fake latency, failNextWrite, reset); students from a StudentDirectory
   roster-directory.ts   StudentDirectory that calls the roster routes below (browser side)
   roster.server.ts      server-only: reads `students` with the admin client, in pages
-  supabase-repository.ts  stub for the full backend; each method has a TODO describing its query
+  logs.server.ts        server-only: reads/writes `donation_logs`, validates request bodies
+  supabase-repository.ts  the real repository (browser side): fetch()es the routes below
   index.ts              wires the repository from NEXT_PUBLIC_VOLUNTEER_DATA_SOURCE
 app/api/volunteer/students/        GET ?q=   → search results
 app/api/volunteer/students/[id]/   GET       → one student
+app/api/volunteer/logs/            GET ?studentId=, POST   (see Donation logs)
+app/api/volunteer/logs/recent|totals|[id]/
   provider.tsx          context + hooks; UI never imports an implementation
   search.ts, validation.ts, money.ts, time.ts, log-flow.ts   pure, unit-tested
 supabase/drafts/volunteer_workspace.sql   schema additions, not applied
@@ -117,11 +120,11 @@ supabase/drafts/volunteer_workspace.sql   schema additions, not applied
 | Value | Students | Logs |
 | --- | --- | --- |
 | `mock` (default) | 30 fictional seed students | Seeded, in memory |
-| `supabase` (set in `.env` locally) | Real `students` table | Empty at start, in memory; nothing is written to `donation_logs` yet |
+| `supabase` (set in `.env` locally) | Real `students` table | Real `donation_logs` table |
 
-Students and logs are separate seams: `StudentDirectory` (search, get) supplies students to the in-memory log store. That is what lets the real roster run before logs are connected. When `donation_logs` is wired up, `SupabaseVolunteerRepository` replaces the log store. There is no data-fetching library: a `revision` counter in the provider is bumped after every successful write, and every query refetches when it changes. That is enough for one volunteer screen at a time and avoids a dependency.
+`StudentDirectory` (search, get) is a smaller seam: the mock can take the real roster through it, and `SupabaseVolunteerRepository` reuses `RosterDirectory` for its student calls. Prototype controls (make the next save fail, reset) only exist with `mock`. There is no data-fetching library: a `revision` counter in the provider is bumped after every successful write, and every query refetches when it changes. That is enough for one volunteer screen at a time and avoids a dependency.
 
-**Edits are direct overwrites.** The owner decided volunteers fix a log by editing it in place: no correction reason, no history UI, no void/reversal rows. `donation_logs` gains an `updated_at` (draft migration) so an edit is at least visible as recent. Totals are always sums of logs, never stored, so an edit changes every total consistently. Logs are never deleted; the planned RLS has no delete policy.
+**Edits are direct overwrites.** The owner decided volunteers fix a log by editing it in place: no correction reason, no history UI, no void/reversal rows. There is no `updated_at` column yet (MVP: no schema change), so the API returns `recorded_at` as both `createdAt` and `updatedAt`; the "Updated" chip after an edit comes from client state. `supabase/drafts/volunteer_workspace.sql` still has the column and trigger if it's wanted later. Totals are always sums of logs, never stored, so an edit changes every total consistently. Logs are never deleted; the planned RLS has no delete policy.
 
 **Retry-safe creates.** Every entry gets a client-generated UUID when the student is picked. It is reused on "Try again" and becomes `donation_logs.transaction_id`, the primary key. A retry after a lost response therefore hits the same key: same payload returns the existing row, a different payload is rejected (`SubmissionConflictError`). A disabled button can't cover a response lost in transit; the key can. The mock implements the same rule, with tests.
 
@@ -151,6 +154,29 @@ browser (StudentSearch, 150 ms debounce)
 - **Failures are not "no match".** If the request fails, the search box says search isn't working and offers "Search again", and Enter can't pick from an older list. Showing "no student matches" on a network error could push a volunteer to log under someone else.
 - **Login check in each route.** Both handlers call `getVolunteer()` first and return 401 without a valid session. The layout check doesn't cover them, because an API route is a separate URL.
 
+### Donation logs
+
+```
+browser (SupabaseVolunteerRepository, fetch)
+  → /api/volunteer/logs…  → getVolunteer() or 401 → validate body or 400
+  → logs.server.ts with the admin client (server only, bypasses RLS) → donation_logs
+```
+
+| Route | Request | Response |
+| --- | --- | --- |
+| `GET /api/volunteer/logs?studentId=` | | `DonationLog[]`, newest first |
+| `GET /api/volunteer/logs/recent?limit=` | limit 1–100, default 10 | `LogWithStudent[]` (id, names, grade, homeroom only) |
+| `GET /api/volunteer/logs/totals?studentId=` | | `StudentTotals`, summed from the rows |
+| `POST /api/volunteer/logs` | `NewLog` | `DonationLog`; 400 invalid or unknown student; 409 reused id with a different donation |
+| `PATCH /api/volunteer/logs/[id]` | `LogPatch` | `DonationLog`; 400; 404 |
+
+- **Retry-safe create in the database.** The insert uses the browser's submission id as `transaction_id`. A second insert hits the primary key (Postgres `23505`); the server reads the existing row and returns it if student, method and amount match, else 409. Checked live: a response dropped after the insert, then "Try again", left one row; five simultaneous POSTs with one id left one row.
+- **Validation twice.** The route rejects bad bodies (UUID id, numeric student id, `cans`/`cash`, whole number within the UI's limits) before any query; the `amount_matches_method` check constraint rejects anything that slips past (checked: zero, wrong field, both fields, unknown method, unknown student all fail).
+- **Totals are computed, not stored.** `totals` sums `can_count` and `amount_cents` for the student on each request and converts with `canEquivalents()`, so an edit changes every total at once. A student has a handful of rows, so there is no view or cache.
+- **`online` rows are excluded** from every read and from edits until online payments and refunds are defined.
+- **Mapping:** `transaction_id`→`id`, `can_count`→`cans`, `amount_cents`→`cashCents`, `recorded_at`→`createdAt`/`updatedAt`, `student_id` (bigint)→string.
+- **Still to do:** volunteer RLS policies (today everything is server-only through the admin client, which is enough for a shared login), and `occurred_at` is always the insert time.
+
 ### Volunteer login
 
 ```
@@ -162,6 +188,7 @@ browser (StudentSearch, 150 ms debounce)
 ```
 
 - **`public.admin` table** (`supabase/migrations/20260929000000_admin_login.sql`): `username` (lowercase `a-z 0-9 _ -`, 3 to 40 characters) and a bcrypt `password_hash` from `pgcrypto`. A check constraint rejects anything that isn't a bcrypt hash. RLS is on with no policies, and `anon`/`authenticated` have no grants.
+- **`add_admin(username, password)`** (`20260929010000_add_admin.sql`) hashes the password and inserts the row, so admins are added with `select public.add_admin('desk', '…')`. It requires 12+ characters. No API role can execute it, so it runs only from the SQL editor.
 - **`verify_admin()` is executable only by `service_role`.** The publishable key can't call it to guess passwords. Unknown username and wrong password both return `false` and show the same message.
 - **Why not Supabase Auth.** The owner wanted a plain table of admin logins. Supabase Auth would add email-based users, JWTs and role claims for what is, for now, a shared desk login. The `proxy.ts` session refresh stays for when Supabase Auth is used.
 - **Why pgcrypto instead of an npm hashing package.** An admin can be added with one SQL statement, and there's no dependency or hashing script.
@@ -220,7 +247,7 @@ The cash split (`~27%`) and the “$1 = 1 can” wording are demo placeholders. 
 
 ## Deliberately not built yet
 
-- Donation-log backend and reservations. Auth is a single admin login table (see Volunteer login).
+- Reservations. Auth is a single admin login table (see Volunteer login).
 - The design-tool runtime (`support.js`).
 - Dark mode (see Visual system).
 
@@ -230,7 +257,7 @@ The cash split (`~27%`) and the “$1 = 1 can” wording are demo placeholders. 
 | --- | --- | --- |
 | Branding | Owner | The Assumption College crest is in the header and footer. The tomato/butter palette is still not the school's colours. |
 | Volunteer admins | Owner | Add the real admin logins in the SQL editor (see `CLAUDE.md`), and set `SESSION_SECRET` in Vercel before deploying. |
-| Donation logs in the database | Build | Students are real; logs are still in memory. Implement the log methods in `supabase-repository.ts`, promote `supabase/drafts/volunteer_workspace.sql` into a migration, add the volunteer RLS policies. |
+| Log search/indexes and `updated_at` | Build | Logs are in `donation_logs`. `supabase/drafts/volunteer_workspace.sql` (indexes, `updated_at`, Postgres name search) is optional until volume or audit needs call for it. |
 | “Choose a collection area” flow | Owner + build | The link is `#`. The area model and booking rule are undecided, and the grid is a schematic placeholder. |
 | Incentive rules | Organizers | Dates, cutoffs, ties, dodgeball qualification order, and cash treatment. |
 | Public donor names | Owner | The page shows “First L.” names (fictional). How real names appear publicly is a privacy decision. |

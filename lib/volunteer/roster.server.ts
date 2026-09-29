@@ -12,13 +12,13 @@ import type { Grade, Student } from "./types";
  * Only the fields the workspace shows leave this module: no hr_teacher.
  */
 
-const COLUMNS = "student_id, first_name, last_name, grade, hr";
+export const STUDENT_COLUMNS = "student_id, first_name, last_name, grade, hr";
 /** PostgREST returns at most 1,000 rows per request by default; the roster is larger. */
 const PAGE = 1000;
 
-type Row = { student_id: number; first_name: string; last_name: string; grade: number; hr: string };
+export type StudentRow = { student_id: number; first_name: string; last_name: string; grade: number; hr: string };
 
-function toStudent(r: Row): Student {
+export function toStudent(r: StudentRow): Student {
   return {
     id: String(r.student_id),
     firstName: r.first_name,
@@ -36,7 +36,7 @@ export async function loadRoster(): Promise<Student[]> {
   for (let from = 0; ; from += PAGE) {
     const { data, error } = await db
       .from("students")
-      .select(COLUMNS)
+      .select(STUDENT_COLUMNS)
       .order("student_id")
       .range(from, from + PAGE - 1);
     if (error) throw new Error(`Couldn't read students: ${error.message}`);
@@ -49,7 +49,7 @@ export async function getRosterStudent(id: string): Promise<Student | null> {
   if (!/^\d{1,18}$/.test(id)) return null;
   const { data, error } = await createAdminClient()
     .from("students")
-    .select(COLUMNS)
+    .select(STUDENT_COLUMNS)
     .eq("student_id", Number(id))
     .maybeSingle();
   if (error) throw new Error(`Couldn't read student: ${error.message}`);

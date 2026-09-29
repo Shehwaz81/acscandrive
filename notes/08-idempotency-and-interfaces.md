@@ -42,11 +42,11 @@ updateLog(id, patch)  → savedLog
 Two things implement it:
 
 - a **mock** that keeps data in memory, with fake delays and a switch to make the next save fail;
-- a **real** implementation that will query Postgres.
+- a **real** implementation that calls the server, which queries Postgres.
 
 A configuration value picks one at startup. The UI can't tell the difference.
 
-Seams can be split further. This app has a separate one for *students* (`StudentDirectory`: search, get). That's how it runs the **real** roster with **in-memory** logs: the log store stays the mock, and only the student source is swapped. Smaller seams let you connect a real backend one piece at a time.
+Seams can be split further. This app has a separate one for *students* (`StudentDirectory`: search, get). That's how the app first ran the **real** roster with **in-memory** logs: the log store stayed the mock, and only the student source was swapped. Smaller seams let you connect a real backend one piece at a time; the logs were connected later without touching a single component.
 
 Why bother:
 
@@ -57,4 +57,4 @@ Why bother:
 
 The word **seam** (from Michael Feathers) means a place where you can swap behaviour without editing the code on either side. The interface is the seam. Keep it narrow and phrased in the UI's terms (`cashCents`, `homeroom`), and let the implementation translate to storage terms (`amount_cents`, `hr`). Then a schema change touches one file, not every component.
 
-The cost: the mock can drift from reality. Where the rule matters, such as the idempotent create, the mock implements it for real and has tests, so the real implementation has a reference to match.
+The cost: the mock can drift from reality. Where the rule matters, such as the idempotent create, the mock implements it for real and has tests, so the real implementation had a reference to match. The real one was then checked against the actual database: a reply dropped on purpose after the row was written, then a retry, left exactly one row.

@@ -1,7 +1,8 @@
 -- Volunteer/admin login. Each row is a username and a bcrypt password hash.
 -- Anyone in this table can open /volunteer; there are no roles.
 --
--- Add an admin (run in the Supabase SQL editor; use a long password):
+-- Add an admin (run in the Supabase SQL editor; use a long password).
+-- Easier: select public.add_admin('desk', 'a-long-password'); (next migration)
 --   insert into public.admin (username, password_hash)
 --   values ('desk', extensions.crypt('a-long-password', extensions.gen_salt('bf', 12)));
 --

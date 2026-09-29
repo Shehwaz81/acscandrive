@@ -1,76 +1,55 @@
-import type { VolunteerRepository } from "./repository";
-import type { LogPatch, NewLog } from "./types";
+import { SubmissionConflictError, type VolunteerRepository } from "./repository";
+import { RosterDirectory } from "./roster-directory";
+import type { DonationLog, LogPatch, LogWithStudent, NewLog, StudentTotals } from "./types";
 
 /**
- * Placeholder for the real backend. Each TODO describes the intended query
- * against the existing tables (see supabase/migrations). Column mapping:
- *   Student.id ↔ students.student_id (bigint, sent as string)
- *   Student.homeroom ↔ students.hr
- *   DonationLog.id ↔ donation_logs.transaction_id
- *   cans ↔ can_count, cashCents ↔ amount_cents
- *   createdAt ↔ recorded_at, updatedAt ↔ updated_at
- *
- * Access: every call must run as a signed-in user whose JWT carries the
- * volunteer role; RLS policies enforce this (a signed-in user without the role
- * sees nothing). Never use the service-role key from the browser.
+ * The real backend, from the browser: every call goes to the workspace's
+ * route handlers (app/api/volunteer/students and app/api/volunteer/logs),
+ * which check the volunteer session and query Postgres with the server-only
+ * admin client. The browser never talks to the database directly.
  */
 
-function notImplemented(method: string): never {
-  throw new Error(`SupabaseVolunteerRepository.${method}: Not implemented`);
+async function send<T>(url: string, init?: RequestInit): Promise<T> {
+  const res = await fetch(url, {
+    ...init,
+    cache: "no-store",
+    headers: init?.body ? { "content-type": "application/json" } : undefined,
+  });
+  if (res.status === 409) throw new SubmissionConflictError();
+  if (!res.ok) throw new Error(`Request failed (${res.status})`);
+  return (await res.json()) as T;
 }
 
+const q = encodeURIComponent;
+
 export class SupabaseVolunteerRepository implements VolunteerRepository {
-  async searchStudents(query: string) {
-    // TODO: RPC `search_students(q text)` that normalizes with unaccent/lower,
-    // returns prefix matches as `exact`, and uses pg_trgm similarity()
-    // (GIN trigram index on the name) for up to 4 `similar` rows, only when
-    // length(q) >= 4. Sort by last_name, first_name, grade.
-    void query;
-    return notImplemented("searchStudents");
+  private readonly roster = new RosterDirectory();
+
+  searchStudents(query: string) {
+    return this.roster.search(query);
   }
 
-  async getStudent(id: string) {
-    // TODO: select student_id, first_name, last_name, grade, hr from students
-    // where student_id = $1 (maybeSingle).
-    void id;
-    return notImplemented("getStudent");
+  getStudent(id: string) {
+    return this.roster.get(id);
   }
 
-  async listLogsForStudent(studentId: string) {
-    // TODO: select * from donation_logs where student_id = $1
-    // order by recorded_at desc.
-    void studentId;
-    return notImplemented("listLogsForStudent");
+  listLogsForStudent(studentId: string) {
+    return send<DonationLog[]>(`/api/volunteer/logs?studentId=${q(studentId)}`);
   }
 
-  async listRecentLogs(limit: number) {
-    // TODO: select donation_logs.*, students(*) order by recorded_at desc limit $1.
-    void limit;
-    return notImplemented("listRecentLogs");
+  listRecentLogs(limit: number) {
+    return send<LogWithStudent[]>(`/api/volunteer/logs/recent?limit=${limit}`);
   }
 
-  async getTotals(studentId: string) {
-    // TODO: view `student_totals` (sum(can_count), sum(amount_cents)) filtered
-    // by student_id; compute canEquivalents with lib/volunteer/money.ts so the
-    // rounding rule lives in one place.
-    void studentId;
-    return notImplemented("getTotals");
+  getTotals(studentId: string) {
+    return send<StudentTotals>(`/api/volunteer/logs/totals?studentId=${q(studentId)}`);
   }
 
-  async createLog(input: NewLog) {
-    // TODO: insert with transaction_id = input.id. On unique violation (23505),
-    // select the existing row: return it if student/method/amount match (a
-    // retry), otherwise throw SubmissionConflictError. The table's
-    // amount_matches_method constraint rejects invalid amounts.
-    void input;
-    return notImplemented("createLog");
+  createLog(input: NewLog) {
+    return send<DonationLog>("/api/volunteer/logs", { method: "POST", body: JSON.stringify(input) });
   }
 
-  async updateLog(id: string, patch: LogPatch) {
-    // TODO: update donation_logs set method, can_count, amount_cents
-    // where transaction_id = $1 returning *; the trigger sets updated_at.
-    void id;
-    void patch;
-    return notImplemented("updateLog");
+  updateLog(id: string, patch: LogPatch) {
+    return send<DonationLog>(`/api/volunteer/logs/${q(id)}`, { method: "PATCH", body: JSON.stringify(patch) });
   }
 }
