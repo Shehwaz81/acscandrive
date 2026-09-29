@@ -2,9 +2,7 @@
 
 This is the running record of how the Can Drive site is built and why. Update it when a decision changes. Business rules and data constraints live in `CLAUDE.md`. This file covers the technical and design choices made to satisfy them.
 
-_Last updated: 2026-09-29. Current scope: public homepage frontend with demo data, and the volunteer workspace (`/volunteer`). The workspace searches the real `students` table; donation logs are still kept in browser memory. There is no auth yet._
-
-> **Merge blocker (branch `feat/roster-search`):** the roster routes and `/volunteer` have no login check. The owner will add volunteer auth before merging. See [Roster search](#roster-search-real-students).
+_Last updated: 2026-09-29. Current scope: public homepage frontend with demo data, and the volunteer workspace (`/volunteer`). The workspace searches the real `students` table; donation logs are still kept in browser memory. `/volunteer` and its API require an admin login (see [Volunteer login](#volunteer-login))._
 
 ## Stack
 
@@ -18,6 +16,7 @@ _Last updated: 2026-09-29. Current scope: public homepage frontend with demo dat
 | Tests | Vitest + Testing Library (jsdom) | `pnpm test`. Unit tests for pure modules; component tests for the log flow. |
 | Hosting (planned) | Vercel | |
 | Data | Supabase/Postgres via `@supabase/ssr` + `@supabase/supabase-js` | See [Supabase connection](#supabase-connection). |
+| Volunteer auth | `public.admin` table (bcrypt via `pgcrypto`) + HMAC-signed cookie | No auth library. See [Volunteer login](#volunteer-login). |
 
 ## Source of the design
 
@@ -96,7 +95,7 @@ Checked at 320, 390, 768, 1024, 1280 and 1440 with no horizontal scroll.
 `/volunteer` (dashboard: look up a student, see logs and totals, fix a log) and `/volunteer/log` (the entry flow). Frontend only for now; all data goes through a repository interface.
 
 ```
-app/volunteer/          layout (guard stub, noindex, shell), dashboard page, log page
+app/volunteer/          layout (login guard, noindex, shell), dashboard page, log page
 components/volunteer/   workspace UI (all client components)
 lib/volunteer/
   types.ts              Student, DonationLog, NewLog, LogPatch, ... (camelCase, id as string)
@@ -130,7 +129,7 @@ Students and logs are separate seams: `StudentDirectory` (search, get) supplies 
 
 **Log flow state** is one reducer (`idle | saving | failed | saved`). While saving, every other action is ignored, and a ref guards against two saves starting in one render. A failure keeps every value and focuses "Try saving again"; success only shows once the write resolves.
 
-**Privacy.** Seed data is fictional. Student names only exist in `/volunteer` bundles (checked: the homepage's chunks contain none). The layout sets `robots: noindex, nofollow`. The guard (`lib/volunteer/guard.ts`) is a stub that currently lets everyone in, for both data sources (see the merge blocker below).
+**Privacy.** Seed data is fictional. Student names only exist in `/volunteer` bundles (checked: the homepage's chunks contain none). The layout sets `robots: noindex, nofollow`. The guard (`lib/volunteer/guard.ts`) requires an admin login for both data sources; see [Volunteer login](#volunteer-login).
 
 **Times** display in `America/Toronto`; "Today" means the Toronto calendar day.
 
@@ -150,7 +149,30 @@ browser (StudentSearch, 150 ms debounce)
 - **Paging gotcha.** Supabase's API returns at most 1,000 rows per request, and the roster has 1,113, so `loadRoster()` reads in pages of 1,000. Without this, 113 students would silently never appear. This is tested, and was checked live: the highest-id students are findable.
 - **Minimum data out.** `hr_teacher` is never selected. Responses carry only id, names, grade and homeroom, with `Cache-Control: private, no-store`.
 - **Failures are not "no match".** If the request fails, the search box says search isn't working and offers "Search again", and Enter can't pick from an older list. Showing "no student matches" on a network error could push a volunteer to log under someone else.
-- **Merge blocker: no auth.** Anyone who can reach the site can call these routes. Before merging, check for a signed-in volunteer in `requireVolunteer()` and at the top of both route handlers, and add the RLS policies from `supabase/drafts/volunteer_workspace.sql`. Until then, run it only locally: `pnpm dev -H 127.0.0.1` keeps it off the school network.
+- **Login check in each route.** Both handlers call `getVolunteer()` first and return 401 without a valid session. The layout check doesn't cover them, because an API route is a separate URL.
+
+### Volunteer login
+
+```
+/login form → server action login()
+  → admin client: rpc verify_admin(username, password)   (bcrypt compare inside Postgres)
+  → true: set cookie volunteer_session = username.expiresAt.HMAC   → redirect /volunteer
+/volunteer layout → requireVolunteer()   → no valid cookie: redirect /login
+/api/volunteer/*  → getVolunteer()       → no valid cookie: 401
+```
+
+- **`public.admin` table** (`supabase/migrations/20260929000000_admin_login.sql`): `username` (lowercase `a-z 0-9 _ -`, 3 to 40 characters) and a bcrypt `password_hash` from `pgcrypto`. A check constraint rejects anything that isn't a bcrypt hash. RLS is on with no policies, and `anon`/`authenticated` have no grants.
+- **`verify_admin()` is executable only by `service_role`.** The publishable key can't call it to guess passwords. Unknown username and wrong password both return `false` and show the same message.
+- **Why not Supabase Auth.** The owner wanted a plain table of admin logins. Supabase Auth would add email-based users, JWTs and role claims for what is, for now, a shared desk login. The `proxy.ts` session refresh stays for when Supabase Auth is used.
+- **Why pgcrypto instead of an npm hashing package.** An admin can be added with one SQL statement, and there's no dependency or hashing script.
+- **Session: stateless signed cookie** (`lib/auth/token.ts`, `lib/auth/session.ts`). The cookie is an HMAC-SHA256 over `username.expiresAt` with `SESSION_SECRET`, is `HttpOnly`, `SameSite=Lax` and `Secure` in production, and lasts 12 hours. There's no sessions table. The tradeoff: deleting an admin doesn't end their current session until it expires, and rotating `SESSION_SECRET` signs everyone out. Missing or short secrets throw, so the check fails closed.
+- **Rule:** every server action or route handler that touches volunteer data calls `requireVolunteer()` or `getVolunteer()` itself.
+- **Not built:** rate limiting or lockout, per-volunteer accounts, roles, and a password-reset UI. A shared login can't identify which volunteer made an entry.
+- **Verified:**
+  - Database: right and wrong passwords, unknown user, username case and whitespace, plaintext rejected, `anon`/`authenticated` without select or execute.
+  - Unit tests for the token: tampering, a different secret, expiry and malformed input.
+  - Browser: redirect when signed out, error that keeps the username, sign-in, the cookie is `HttpOnly`, sign out, and a tampered cookie is rejected.
+  - curl: 401 from both API routes when signed out.
 
 ## Supabase connection
 
@@ -162,7 +184,7 @@ browser (StudentSearch, 150 ms debounce)
 | `proxy.ts` → `lib/supabase/proxy.ts` | Publishable | n/a | Refreshes the auth cookie with `getClaims()` on each request |
 
 - **Why not `@supabase/server`:** it's a public-beta package built for header-based backends such as Edge Functions. In Next.js it still needs `@supabase/ssr` for cookies, plus hand-rolled JWKS caching. The supabase-js `auth.getClaims()` call already verifies JWTs.
-- **Current access:** `students` and `donation_logs` have RLS enabled with no policies, so publishable-key requests see no rows and can't write (verified: `students` returns 0 of 1,113 rows, and an insert is rejected with 42501). All data access goes through server code until volunteer roles and public aggregates are designed.
+- **Current access:** `students` and `donation_logs` have RLS enabled with no policies, so publishable-key requests see no rows and can't write (verified: `students` returns 0 of 1,113 rows, and an insert is rejected with 42501). All data access goes through server code, which checks the volunteer login itself. `admin` is server-only in the same way.
 - **Schema source:** the tables were created directly on the remote project. `supabase/migrations/20260927000000_baseline_schema.sql` reproduces them, and `lib/supabase/database.types.ts` is generated from the live schema.
 
 ## Data boundary
@@ -198,7 +220,7 @@ The cash split (`~27%`) and the “$1 = 1 can” wording are demo placeholders. 
 
 ## Deliberately not built yet
 
-- Backend, auth and reservations. The homepage and volunteer workspace are frontend-only.
+- Donation-log backend and reservations. Auth is a single admin login table (see Volunteer login).
 - The design-tool runtime (`support.js`).
 - Dark mode (see Visual system).
 
@@ -207,7 +229,7 @@ The cash split (`~27%`) and the “$1 = 1 can” wording are demo placeholders. 
 | Item | Needed from | Notes |
 | --- | --- | --- |
 | Branding | Owner | The Assumption College crest is in the header and footer. The tomato/butter palette is still not the school's colours. |
-| Volunteer login | Build | **Blocks merging `feat/roster-search`.** `/volunteer` and `/api/volunteer/*` have no access check while they serve real names. Real login depends on the account-strategy decision in `CLAUDE.md`. |
+| Volunteer admins | Owner | Add the real admin logins in the SQL editor (see `CLAUDE.md`), and set `SESSION_SECRET` in Vercel before deploying. |
 | Donation logs in the database | Build | Students are real; logs are still in memory. Implement the log methods in `supabase-repository.ts`, promote `supabase/drafts/volunteer_workspace.sql` into a migration, add the volunteer RLS policies. |
 | “Choose a collection area” flow | Owner + build | The link is `#`. The area model and booking rule are undecided, and the grid is a schematic placeholder. |
 | Incentive rules | Organizers | Dates, cutoffs, ties, dodgeball qualification order, and cash treatment. |

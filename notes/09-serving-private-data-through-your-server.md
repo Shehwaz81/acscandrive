@@ -17,7 +17,7 @@ The alternative is letting the browser query the database directly with the publ
 
 A URL like `/api/volunteer/students` is reachable by anyone who can reach the site, whether or not your UI links to it. Hiding a page, or only calling the endpoint from a "protected" screen, protects nothing: `curl` doesn't load your UI.
 
-Access control must run **on the server, on every request, at every entry point**: the page and each API route separately. That's why this branch is marked *merge blocker: no auth*. The code works, but anyone could search the roster. Keep it on your own machine until login exists (`pnpm dev -H 127.0.0.1` listens only on your computer, not the school network).
+Access control must run **on the server, on every request, at every entry point**: the page and each API route separately. Here the `/volunteer` layout calls `requireVolunteer()`, and each roster route checks `getVolunteer()` itself and answers 401 without a valid session (note 10). Before login existed, the roster routes were a merge blocker for exactly this reason: the code worked, but anyone could have searched the roster.
 
 ## Send the minimum
 
