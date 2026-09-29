@@ -5,10 +5,9 @@ import type { Grade, Student } from "./types";
 /**
  * Reads the real roster from `students` for the volunteer workspace.
  *
- * AUTH TODO — MERGE BLOCKER: there is no volunteer login yet, so nothing here
- * checks who is asking. The admin client bypasses RLS. Before this ships,
- * every caller must verify a signed-in volunteer first (see
- * lib/volunteer/guard.ts).
+ * Nothing here checks who is asking, and the admin client bypasses RLS, so
+ * every caller must verify a signed-in volunteer first (getVolunteer() or
+ * requireVolunteer()).
  *
  * Only the fields the workspace shows leave this module: no hr_teacher.
  */

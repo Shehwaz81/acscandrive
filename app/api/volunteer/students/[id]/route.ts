@@ -1,10 +1,10 @@
 import { NextResponse, type NextRequest } from "next/server";
+import { getVolunteer } from "@/lib/auth/session";
 import { getRosterStudent } from "@/lib/volunteer/roster.server";
-
-// AUTH TODO — MERGE BLOCKER: no volunteer check yet (see lib/volunteer/guard.ts).
 
 /** GET /api/volunteer/students/123 → Student, or 404. */
 export async function GET(_request: NextRequest, ctx: RouteContext<"/api/volunteer/students/[id]">) {
+  if (!(await getVolunteer())) return NextResponse.json({ error: "Sign in required." }, { status: 401 });
   const { id } = await ctx.params;
   try {
     const student = await getRosterStudent(id);
