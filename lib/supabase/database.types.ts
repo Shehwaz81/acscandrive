@@ -108,6 +108,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      add_admin: {
+        Args: { p_password: string; p_username: string }
+        Returns: string
+      }
       verify_admin: {
         Args: { p_password: string; p_username: string }
         Returns: boolean

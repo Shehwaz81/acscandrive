@@ -76,7 +76,7 @@ Simple admin login, deliberately without Supabase Auth or an auth library. Detai
 - **Every entry point checks for itself:** pages and layouts use `requireVolunteer()` (`lib/volunteer/guard.ts`, redirects to `/login`). Route handlers and server actions touching volunteer data use `getVolunteer()`/`requireVolunteer()` at the top (routes return 401). A layout check does not protect actions or API routes.
 - `SESSION_SECRET` (32+ characters, `openssl rand -base64 32`) must be set in `.env` and in Vercel. Rotating it signs everyone out. Without it, auth throws (fails closed).
 - Manage admins in the Supabase SQL editor. Usernames are lowercase `a-z 0-9 _ -`, 3 to 40 characters:
-  - Add: `insert into public.admin (username, password_hash) values ('desk', extensions.crypt('long-password', extensions.gen_salt('bf', 12)));`
+  - Add: `select public.add_admin('desk', 'a-long-password');`. This hashes with bcrypt, lowercases the username and requires 12+ characters. It can only be run from the SQL editor, not by the app. The equivalent raw insert is `insert into public.admin (username, password_hash) values ('desk', extensions.crypt('a-long-password', extensions.gen_salt('bf', 12)));`
   - Change password: `update public.admin set password_hash = extensions.crypt('new-password', extensions.gen_salt('bf', 12)) where username = 'desk';`
   - Remove: `delete from public.admin where username = 'desk';`. Existing sessions last until they expire (≤12h); rotate `SESSION_SECRET` to cut them off now.
 - Known limits: no rate limiting or lockout (use long passwords), no per-volunteer accountability with a shared login, no reset UI.
