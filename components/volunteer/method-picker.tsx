@@ -49,13 +49,13 @@ export function MethodPicker({
             disabled={disabled}
             onClick={() => onChange(o.value)}
             onKeyDown={(e) => onKeyDown(e, i)}
-            className={`flex min-h-[72px] items-center gap-3 border-2 border-ink px-3 text-left disabled:opacity-60 md:gap-4 md:px-4 ${
+            className={`flex min-h-[72px] items-center gap-2.5 border-2 border-ink px-3 text-left disabled:opacity-60 md:gap-4 md:px-4 ${
               checked ? "bg-ink text-paper" : "bg-field text-ink hover:bg-kraft"
             }`}
           >
             <span
               aria-hidden
-              className={`flex size-10 flex-none items-center justify-center border-2 ${
+              className={`flex size-8 flex-none items-center justify-center border-2 md:size-10 ${
                 checked ? "border-butter text-butter" : "border-ink"
               }`}
             >

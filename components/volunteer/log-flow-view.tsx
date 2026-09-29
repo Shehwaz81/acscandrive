@@ -46,13 +46,12 @@ function Step({
       >
         {n}
       </span>
-      <div className="min-w-0">
-        <h2 id={titleId} className="flex min-h-10 items-center text-[17px] font-bold">
-          <span className="sr-only">Step {n}: </span>
-          {title}
-        </h2>
-        <div className="mt-3">{children}</div>
-      </div>
+      <h2 id={titleId} className="flex min-h-10 items-center text-[17px] font-bold">
+        <span className="sr-only">Step {n}: </span>
+        {title}
+      </h2>
+      {/* Full width on phones; indented under the title from md up. */}
+      <div className="col-span-2 mt-3 min-w-0 md:col-span-1 md:col-start-2">{children}</div>
     </li>
   );
 }

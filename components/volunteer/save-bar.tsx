@@ -34,7 +34,7 @@ export function SaveBar({
           <p className="mt-1 text-[16px] leading-snug">
             <span className="mr-1.5 inline-block bg-butter px-2 font-display text-[32px] leading-tight font-black uppercase">
               {formatAmount(amount)}
-            </span>
+            </span>{" "}
             for <strong>{fullName(student)}</strong>, homeroom <strong>{student.homeroom}</strong>
           </p>
         ) : (
