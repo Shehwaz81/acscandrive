@@ -9,7 +9,8 @@ export function Ticket({
   children,
 }: {
   stub: string;
-  number: number;
+  /** Shown after the stub label on large screens; omit for none. */
+  number?: number;
   /** Colours, rotation, and margins. */
   className?: string;
   stubBorderClassName?: string;
@@ -22,7 +23,9 @@ export function Ticket({
       >
         <span className="stub-label font-mono text-[10px] font-bold tracking-[.16em] lg:text-xs lg:tracking-[.18em]">
           {stub}
-          <span className="hidden lg:inline"> · {String(number).padStart(2, "0")}</span>
+          {number !== undefined && (
+            <span className="hidden lg:inline"> · {String(number).padStart(2, "0")}</span>
+          )}
         </span>
       </div>
       <div className="min-w-0 flex-1">{children}</div>

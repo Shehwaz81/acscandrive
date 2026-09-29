@@ -16,6 +16,10 @@
   --color-lid: #dcd2be;
   --color-zone: #d8cfbd;
   --color-canvas: #d9d3c7;
+  /* Volunteer workspace: input fields and errors (tomato fails contrast as text). */
+  --color-field: #fffdf8;
+  --color-error: #a8341e;
+  --color-error-surface: #f7ddd5;
 
   --font-sans: var(--font-instrument-sans), system-ui, sans-serif;
   --font-display: var(--font-big-shoulders), Impact, sans-serif;
