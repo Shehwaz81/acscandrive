@@ -1,4 +1,4 @@
-import { LogoPlaceholder } from "@/components/marks";
+import { SchoolLogo } from "@/components/marks";
 import { NAV_LINKS, VOLUNTEER_LOGIN_HREF, WRAP } from "@/lib/site";
 
 export function SiteFooter() {
@@ -8,7 +8,7 @@ export function SiteFooter() {
         className={`${WRAP} flex flex-col gap-6 pt-9 pb-7 lg:grid lg:grid-cols-[minmax(0,5fr)_minmax(0,3fr)_minmax(0,4fr)] lg:gap-12 lg:pt-14 lg:pb-10`}
       >
         <div className="flex items-center gap-3.5 lg:items-start lg:gap-4">
-          <LogoPlaceholder className="size-11 border-rule text-[7px] text-rule lg:size-14 lg:text-[8px]" />
+          <SchoolLogo className="size-11 lg:size-14" />
           <div className="flex flex-col gap-0.5 lg:gap-1.5">
             <span className="font-display text-[30px] leading-[.9] font-black uppercase lg:text-[40px]">
               Can Drive

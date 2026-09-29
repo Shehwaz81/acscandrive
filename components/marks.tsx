@@ -1,3 +1,4 @@
+import Image from "next/image";
 import type { ReactNode } from "react";
 
 /** Hand-drawn butter-yellow highlighter stroke behind a word. */
@@ -41,16 +42,15 @@ export function Stamp({ children, className = "" }: { children: ReactNode; class
   );
 }
 
-/** Dashed placeholder until the school supplies its logo. */
-export function LogoPlaceholder({ className = "" }: { className?: string }) {
+/** Assumption College crest. Decorative: the school name always sits beside it. */
+export function SchoolLogo({ className = "" }: { className?: string }) {
   return (
-    <span
-      aria-hidden
-      className={`flex flex-none items-center justify-center border-[1.5px] border-dashed text-center font-mono leading-tight font-semibold ${className}`}
-    >
-      SCHOOL
-      <br />
-      LOGO
-    </span>
+    <Image
+      src="/acslogo.png"
+      alt=""
+      width={371}
+      height={439}
+      className={`flex-none object-contain ${className}`}
+    />
   );
 }
