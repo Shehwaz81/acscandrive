@@ -2,7 +2,8 @@ import { NextResponse, type NextRequest } from "next/server";
 import { getVolunteer } from "@/lib/auth/session";
 import { listRecentLogs } from "@/lib/volunteer/logs.server";
 
-const MAX_LIMIT = 50;
+/** The dashboard fetches 100 so its footer can count today's logs (components/volunteer/recent-logs.tsx). */
+const MAX_LIMIT = 100;
 
 /** GET /api/volunteer/logs/recent?limit=10 → LogWithStudent[], newest first. */
 export async function GET(request: NextRequest) {

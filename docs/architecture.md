@@ -165,7 +165,7 @@ browser (SupabaseVolunteerRepository, fetch)
 | Route | Request | Response |
 | --- | --- | --- |
 | `GET /api/volunteer/logs?studentId=` | | `DonationLog[]`, newest first |
-| `GET /api/volunteer/logs/recent?limit=` | limit 1–50, default 10 | `LogWithStudent[]` (id, names, grade, homeroom only) |
+| `GET /api/volunteer/logs/recent?limit=` | limit 1–100, default 10 | `LogWithStudent[]` (id, names, grade, homeroom only) |
 | `GET /api/volunteer/logs/totals?studentId=` | | `StudentTotals`, summed from the rows |
 | `POST /api/volunteer/logs` | `NewLog` | `DonationLog`; 400 invalid or unknown student; 409 reused id with a different donation |
 | `PATCH /api/volunteer/logs/[id]` | `LogPatch` | `DonationLog`; 400; 404 |
