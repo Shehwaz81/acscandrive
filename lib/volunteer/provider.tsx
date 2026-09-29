@@ -47,6 +47,12 @@ export function RepositoryProvider({
     injectedRepo ? { repo: injectedRepo, mock: injectedMock ?? null } : createRepository(),
   );
   const [revision, setRevision] = useState(0);
+
+  // Mock data lives in memory and resets on reload; drop "saved this session"
+  // entries that would point at logs that no longer exist.
+  useEffect(() => {
+    if (!injectedRepo && mock) sessionSaved.clear();
+  }, [injectedRepo, mock]);
   const [failNextWrite, setFailNextWrite] = useState(() => mock?.getFailNextWrite() ?? false);
 
   const bump = useCallback(() => setRevision((r) => r + 1), []);

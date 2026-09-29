@@ -93,6 +93,11 @@ function LogEditor({ log, onClose, onSaved }: Props) {
     inputRef.current?.select();
   }, []);
 
+  // Refocus after a failure once the field is enabled again (it is disabled while saving).
+  useEffect(() => {
+    if (status === "failed") focusQuietly(inputRef.current);
+  }, [status]);
+
   const parsed = parseAmount(method, raw);
   const current = formatAmount(original);
 
@@ -114,7 +119,6 @@ function LogEditor({ log, onClose, onSaved }: Props) {
       onSaved(log, after);
     } catch {
       setStatus("failed");
-      focusQuietly(inputRef.current);
     }
   };
 

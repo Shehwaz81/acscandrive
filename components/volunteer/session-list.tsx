@@ -35,7 +35,7 @@ export function SessionList() {
               </span>
               <Link
                 href={`/volunteer?student=${student.id}&edit=${log.id}`}
-                aria-label={`Edit ${formatAmount(logAmount(log))} for ${fullName(student)}`}
+                aria-label={`Edit ${formatAmount(logAmount(log))} for ${fullName(student)}, saved ${formatTime(log.createdAt)}`}
                 className="flex min-h-11 items-center border-2 border-ink px-3 text-[14px] font-bold no-underline hover:bg-ink hover:text-paper"
               >
                 Edit
