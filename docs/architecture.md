@@ -32,7 +32,7 @@ app/
 components/
   can.tsx             the CSS can (progress meter + podium block)
   ticket.tsx          torn-stub reward ticket
-  marks.tsx           marker underline, rubber stamp, logo placeholder
+  marks.tsx           marker underline, rubber stamp, school crest (public/acslogo.png)
   home/               one file per homepage section
 lib/
   demo-data.ts        every number on the homepage + pure helpers
@@ -175,7 +175,7 @@ The cash split (`~27%`) and the “$1 = 1 can” wording are demo placeholders. 
 
 | Item | Needed from | Notes |
 | --- | --- | --- |
-| School logo and branding | Owner | Dashed “SCHOOL LOGO” placeholders in the header and footer. |
+| Branding | Owner | The Assumption College crest is in the header and footer. The tomato/butter palette is still not the school's colours. |
 | Volunteer login | Build | "Volunteer login" now links to `/volunteer`, which is guarded by a stub. Real login depends on the account-strategy decision in `CLAUDE.md`. |
 | Supabase volunteer repository | Build | Implement `supabase-repository.ts`, promote `supabase/drafts/volunteer_workspace.sql` into a migration, add the volunteer RLS policies. |
 | “Choose a collection area” flow | Owner + build | The link is `#`. The area model and booking rule are undecided, and the grid is a schematic placeholder. |
