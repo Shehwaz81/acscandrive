@@ -35,7 +35,8 @@ export function StudentResultList({
 }) {
   const sameNames = new Set(findSameNames([...result.exact, ...result.similar]).keys());
   const warning = duplicateWarning(result);
-  const exactCount = result.exact.length;
+  const exactCount = result.exactTotal;
+  const truncated = result.exactTotal > result.exact.length;
   const similarCount = result.similar.length;
 
   const option = (s: Student) => {
@@ -77,6 +78,7 @@ export function StudentResultList({
     <div className="border-2 border-t-0 border-ink bg-field">
       <div className={`${MONO_LABEL} flex justify-between gap-4 border-b border-rule px-4 py-2 text-muted`}>
         <span>
+          {truncated && `${result.exact.length} of `}
           {exactCount} {exactCount === 1 ? "match" : "matches"}
           {similarCount > 0 && ` · ${similarCount} similar`}
         </span>
@@ -89,6 +91,11 @@ export function StudentResultList({
       )}
       <ul id={listId} role="listbox" aria-label="Matching students">
         {result.exact.map(option)}
+        {truncated && (
+          <li role="presentation" className="border-t border-rule px-4 py-2.5 text-[14px] text-body">
+            Showing the first {result.exact.length} of {exactCount}. Type more of the name to narrow it down.
+          </li>
+        )}
         {similarCount > 0 && (
           <li
             role="presentation"

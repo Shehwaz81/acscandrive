@@ -9,6 +9,8 @@ import type { Student, StudentSearchResult } from "./types";
 
 export const SIMILAR_MIN_QUERY = 4;
 export const SIMILAR_LIMIT = 4;
+/** A short query can match hundreds of the ~1,100 students; send only this many. */
+export const EXACT_LIMIT = 20;
 
 /** Lowercase, strip accents and apostrophes, treat hyphens as spaces, collapse whitespace. */
 export function normalize(s: string): string {
@@ -63,7 +65,7 @@ function isExact(tokens: string[], words: string[]): boolean {
 
 export function searchStudents(students: Student[], query: string): StudentSearchResult {
   const q = normalize(query);
-  if (!q) return { exact: [], similar: [] };
+  if (!q) return { exact: [], exactTotal: 0, similar: [] };
   const tokens = q.split(" ");
 
   const exact: Student[] = [];
@@ -72,8 +74,10 @@ export function searchStudents(students: Student[], query: string): StudentSearc
     (isExact(tokens, normalizedName(s).split(" ")) ? exact : rest).push(s);
   }
   exact.sort(compareStudents);
+  const exactTotal = exact.length;
+  const shown = exact.slice(0, EXACT_LIMIT);
 
-  if (q.length < SIMILAR_MIN_QUERY) return { exact, similar: [] };
+  if (q.length < SIMILAR_MIN_QUERY) return { exact: shown, exactTotal, similar: [] };
 
   const nameLimit = q.length >= 8 ? 2 : 1;
   const exactNames = exact.map(normalizedName);
@@ -91,7 +95,7 @@ export function searchStudents(students: Student[], query: string): StudentSearc
     .sort(compareStudents)
     .slice(0, SIMILAR_LIMIT);
 
-  return { exact, similar };
+  return { exact: shown, exactTotal, similar };
 }
 
 /** Groups of two or more students whose normalized full names are identical. */

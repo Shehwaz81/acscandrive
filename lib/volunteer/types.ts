@@ -33,7 +33,10 @@ export interface DonationLog {
 export type LogWithStudent = DonationLog & { student: Student };
 
 export interface StudentSearchResult {
+  /** Word-prefix matches, capped at EXACT_LIMIT. */
   exact: Student[];
+  /** How many students matched before the cap (≥ exact.length). */
+  exactTotal: number;
   /** Near spellings, shown under "Similar spelling". */
   similar: Student[];
 }

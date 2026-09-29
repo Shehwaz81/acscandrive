@@ -64,8 +64,22 @@ describe("searchStudents", () => {
   });
 
   it("returns nothing for a blank query or an unknown name", () => {
-    expect(searchStudents(students, "   ")).toEqual({ exact: [], similar: [] });
-    expect(searchStudents(students, "zzzzqq")).toEqual({ exact: [], similar: [] });
+    expect(searchStudents(students, "   ")).toEqual({ exact: [], exactTotal: 0, similar: [] });
+    expect(searchStudents(students, "zzzzqq")).toEqual({ exact: [], exactTotal: 0, similar: [] });
+  });
+
+  it("caps exact matches but reports the full count", () => {
+    const many = Array.from({ length: 45 }, (_, i) => ({
+      id: `x${i}`,
+      firstName: "Sam",
+      lastName: `Tester${String(i).padStart(2, "0")}`,
+      grade: 9 as const,
+      homeroom: "9A",
+    }));
+    const r = searchStudents(many, "sam");
+    expect(r.exact).toHaveLength(20);
+    expect(r.exactTotal).toBe(45);
+    expect(r.exact[0].lastName).toBe("Tester00");
   });
 });
 
