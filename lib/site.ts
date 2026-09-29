@@ -9,5 +9,4 @@ export const NAV_LINKS = [
   { href: "#map", label: "Collection map" },
 ];
 
-// Placeholder until the volunteer area exists.
-export const VOLUNTEER_LOGIN_HREF = "#";
+export const VOLUNTEER_LOGIN_HREF = "/volunteer";
