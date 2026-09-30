@@ -8,6 +8,10 @@ import { TopDonors } from "@/components/home/top-donors";
 import { ZoneMap } from "@/components/home/zone-map";
 import { getHomepageData } from "@/lib/homepage.server";
 
+// Rebuild in the background at most once a minute; if a rebuild fails, the
+// last good page keeps being served.
+export const revalidate = 60;
+
 export default async function Home() {
   const { goal, total, homerooms, topDonors } = await getHomepageData();
   return (

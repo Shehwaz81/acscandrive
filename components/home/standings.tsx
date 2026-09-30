@@ -5,10 +5,11 @@ import { Can } from "@/components/can";
 import {
   type Homeroom,
   fmt,
+  gradeLabel,
   homeroomStats,
   matchesQuery,
   ordinalSuffix,
-} from "@/lib/demo-data";
+} from "@/lib/homepage";
 import { WRAP } from "@/lib/site";
 
 const TOP_N = 8;
@@ -33,7 +34,7 @@ export function Standings({ homerooms }: { homerooms: Homeroom[] }) {
 
   const countText = query
     ? `${rows.length} match${rows.length === 1 ? "" : "es"}.`
-    : `Showing ${rows.length} of ${ranked.length} demo homerooms.`;
+    : `Showing ${rows.length} of ${ranked.length} homerooms.`;
 
   function onRowClick(room: string) {
     // On mobile the row is an accordion, so a second tap collapses it.
@@ -52,7 +53,7 @@ export function Standings({ homerooms }: { homerooms: Homeroom[] }) {
         <div className="flex flex-col gap-[18px] xl:flex-row xl:items-end xl:justify-between xl:gap-10">
           <div className="flex flex-col gap-[18px] xl:gap-3.5">
             <span className="font-mono text-[11px] font-semibold tracking-[.14em] text-butter xl:text-xs">
-              HOMEROOM TABLE · DEMO TOTALS
+              HOMEROOM TABLE · CAN-EQUIVALENTS
             </span>
             <h2
               id="standings-title"
@@ -67,7 +68,7 @@ export function Standings({ homerooms }: { homerooms: Homeroom[] }) {
               type="search"
               value={query}
               onChange={(e) => setQuery(e.target.value)}
-              placeholder="Try 10C or grade 9"
+              placeholder="Try 204 or grade 9"
               className="h-[52px] w-full min-w-0 bg-paper px-3.5 text-[17px] text-ink shadow-[inset_0_-4px_0_var(--color-butter)] placeholder:text-muted focus-visible:shadow-[inset_0_-4px_0_var(--color-tomato),0_0_0_3px_var(--color-butter)] focus-visible:outline-none xl:px-4"
             />
           </label>
@@ -77,11 +78,11 @@ export function Standings({ homerooms }: { homerooms: Homeroom[] }) {
           <div className="flex flex-col">
             <div
               aria-hidden
-              className="hidden grid-cols-[96px_minmax(0,1fr)_110px_240px] gap-4 border-b-2 border-paper px-5 pb-3 font-mono text-[11.5px] font-semibold tracking-[.1em] text-rule xl:grid"
+              className="hidden grid-cols-[96px_minmax(0,1fr)_170px_220px] gap-4 border-b-2 border-paper px-5 pb-3 font-mono text-[11.5px] font-semibold tracking-[.1em] text-rule xl:grid"
             >
               <span>RANK</span>
               <span>HOMEROOM</span>
-              <span>GRADE</span>
+              <span>GRADES</span>
               <span className="text-right">CAN-EQUIVALENTS</span>
             </div>
             <ul className="border-t-2 border-paper xl:border-t-0">
@@ -142,7 +143,8 @@ function Row({
   selected: boolean;
   onClick: () => void;
 }) {
-  const leader = h.rank === 1;
+  // No leader until someone has donated.
+  const leader = h.rank === 1 && h.total > 0;
   const fg = selected ? "text-ink" : leader ? "text-butter" : "text-paper";
   const bar = selected ? "bg-ink" : leader ? "bg-butter" : "bg-paper";
   return (
@@ -150,8 +152,8 @@ function Row({
       type="button"
       onClick={onClick}
       aria-pressed={selected}
-      aria-label={`${h.room}, grade ${h.grade}, rank ${h.rank}, ${fmt(h.total)} can-equivalents`}
-      className={`grid min-h-[60px] w-full grid-cols-[58px_minmax(0,1fr)_auto] items-center gap-3 px-3 py-2.5 text-left xl:min-h-16 xl:grid-cols-[96px_minmax(0,1fr)_110px_240px] xl:gap-4 xl:px-5 xl:py-3 ${fg} ${selected ? "bg-butter" : "hover:bg-paper/5"}`}
+      aria-label={`${h.room}, ${gradeLabel(h)}, rank ${h.rank}, ${fmt(h.total)} can-equivalents`}
+      className={`grid min-h-[60px] w-full grid-cols-[58px_minmax(0,1fr)_auto] items-center gap-3 px-3 py-2.5 text-left xl:min-h-16 xl:grid-cols-[96px_minmax(0,1fr)_170px_220px] xl:gap-4 xl:px-5 xl:py-3 ${fg} ${selected ? "bg-butter" : "hover:bg-paper/5"}`}
     >
       <span className="flex items-baseline gap-0.5 xl:gap-1">
         <span className="font-display text-[32px] leading-none font-black xl:text-[40px]">
@@ -163,7 +165,7 @@ function Row({
         <span className="font-display text-2xl leading-none font-extrabold xl:text-[28px]">{h.room}</span>
         <span className="text-[12.5px] xl:text-[13px] xl:font-semibold">
           <span className="xl:hidden">
-            Grade {h.grade}
+            {gradeLabel(h)}
             {leader && " · "}
           </span>
           {leader && (
@@ -173,7 +175,7 @@ function Row({
           )}
         </span>
       </span>
-      <span className="hidden text-base xl:block">Grade {h.grade}</span>
+      <span className="hidden text-base xl:block">{gradeLabel(h)}</span>
       <span className="flex flex-col items-end xl:flex-row xl:items-center xl:justify-end xl:gap-3.5">
         <span className="hidden h-2 w-[110px] bg-[rgb(127_127_127/.3)] xl:block">
           <span className={`block h-full ${bar}`} style={{ width: `${Math.round((h.total / leaderTotal) * 100)}%` }} />
@@ -232,7 +234,7 @@ function DetailCard({ h }: { h: Ranked }) {
           </span>
           <span className="font-display text-[88px] leading-[.8] font-black">{h.room}</span>
           <span className="text-[15px]">
-            Grade {h.grade} · Rank {h.rank} · {h.students} students
+            {gradeLabel(h)} · Rank {h.rank} · {h.students} students
           </span>
         </div>
         <Can variant="meter" fill={s.pct} className="h-[118px] w-[84px]" bodyClassName="bg-transparent" />

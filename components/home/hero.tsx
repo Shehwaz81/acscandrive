@@ -1,6 +1,6 @@
 import { Can } from "@/components/can";
-import { MarkerUnderline, Stamp } from "@/components/marks";
-import { fmt } from "@/lib/demo-data";
+import { MarkerUnderline } from "@/components/marks";
+import { fmt } from "@/lib/homepage";
 import { DRIVE, WRAP } from "@/lib/site";
 
 type Progress = { goal: number; total: number };
@@ -101,9 +101,6 @@ function CompactMeter({ goal, total, p }: MeterProps) {
           {p.toGoNote}
         </span>
       </div>
-      <Stamp className="absolute top-[22px] right-0 rotate-6 border-tomato px-1.5 py-0.5 text-[9.5px] tracking-[.1em] text-tomato">
-        DEMO
-      </Stamp>
     </div>
   );
 }
@@ -133,9 +130,6 @@ function BigCanMeter({ goal, total, p }: MeterProps) {
           <span className="font-display text-[28px] leading-none font-extrabold uppercase">cans</span>
         </span>
       </div>
-      <Stamp className="absolute top-3 left-0 -rotate-4 border-tomato px-2.5 py-1 text-xs text-tomato">
-        DEMO FIGURES
-      </Stamp>
 
       <div className="absolute top-[110px] left-0 h-[300px] w-11 font-mono text-[11px] font-semibold text-muted">
         {ticks.map((t, i) => (

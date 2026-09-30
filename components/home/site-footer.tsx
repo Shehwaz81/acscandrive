@@ -40,7 +40,7 @@ export function SiteFooter() {
             </a>
           </span>
           <span className="mt-4 text-xs lg:mt-3 lg:text-[12.5px]">
-            Prototype — all totals are demo figures and reward rules are provisional.
+            Totals update about once a minute. Reward rules are provisional until confirmed.
           </span>
         </div>
       </div>

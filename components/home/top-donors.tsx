@@ -1,6 +1,6 @@
 import { Can } from "@/components/can";
 import { MarkerUnderline } from "@/components/marks";
-import type { Donor } from "@/lib/demo-data";
+import type { Donor } from "@/lib/homepage";
 import { WRAP } from "@/lib/site";
 
 // Podium order left→right is 2nd, 1st, 3rd. Sizes are [phone, md and up].
@@ -54,7 +54,7 @@ export function TopDonors({ donors }: { donors: Donor[] }) {
       >
         <div className="flex flex-col gap-[18px] lg:gap-[22px]">
           <span className="font-mono text-[11px] font-semibold tracking-[.14em] text-muted lg:text-xs">
-            STUDENT TABLE · DEMO TOTALS
+            STUDENT TABLE · TODAY
           </span>
           <h2
             id="donors-title"
@@ -71,7 +71,12 @@ export function TopDonors({ donors }: { donors: Donor[] }) {
         <Podium donors={donors} />
 
         <div className="flex flex-col gap-[18px] lg:gap-[22px]">
-          <ol className="flex flex-col border-t-2 border-ink">
+          {donors.length === 0 && (
+            <p className="border-t-2 border-ink pt-3 text-[15px] text-body">
+              No donations logged yet today. Be the first on the podium.
+            </p>
+          )}
+          <ol className={`flex flex-col ${runnersUp.length ? "border-t-2 border-ink" : ""}`}>
             {runnersUp.map((d, i) => (
               <RunnerUp key={d.name} donor={d} place={i + 4} className={i >= 3 ? "hidden lg:flex" : "flex"} />
             ))}
@@ -83,7 +88,7 @@ export function TopDonors({ donors }: { donors: Donor[] }) {
             See homeroom standings <span aria-hidden>→</span>
           </a>
           <span className="font-mono text-[11px] leading-normal font-semibold text-muted lg:text-xs">
-            Fictional names, demo totals in cans. How names appear on the real board is TBC.
+            Names show as first name + last initial. Cash counts as $1 = 1 can. Resets at midnight.
           </span>
         </div>
       </div>

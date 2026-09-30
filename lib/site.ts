@@ -13,6 +13,8 @@ export const VOLUNTEER_LOGIN_HREF = "/volunteer";
 
 /** Fixed drive details (2026), confirmed by the organizer. Not database data. */
 export const DRIVE = {
+  /** School goal in can-equivalents. */
+  goal: 20_000,
   dates: "October 5–23",
   shortDates: "Oct 5–23",
   deskLocation: "California entrance",
