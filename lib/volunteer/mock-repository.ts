@@ -210,4 +210,10 @@ export class MockVolunteerRepository implements VolunteerRepository, MockControl
     this.logs.set(id, updated);
     return { ...updated };
   }
+
+  async deleteLog(id: string) {
+    await this.delay("write");
+    this.maybeFail();
+    this.logs.delete(id);
+  }
 }

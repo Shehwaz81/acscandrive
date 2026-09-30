@@ -172,3 +172,13 @@ export async function updateLog(id: string, patch: LogPatch): Promise<DonationLo
   if (error) throw new Error(`Couldn't update log: ${error.message}`);
   return data ? toLog(data) : null;
 }
+
+/** Real delete (owner's decision: no history). A missing row is not an error, so a retry succeeds. */
+export async function deleteLog(id: string): Promise<void> {
+  const { error } = await createAdminClient()
+    .from("donation_logs")
+    .delete()
+    .eq("transaction_id", id)
+    .in("method", METHODS);
+  if (error) throw new Error(`Couldn't delete log: ${error.message}`);
+}

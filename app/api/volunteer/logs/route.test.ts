@@ -10,6 +10,7 @@ vi.mock("@/lib/auth/session", () => ({ getVolunteer: async () => session.user })
 const db = vi.hoisted(() => ({
   createLog: vi.fn(),
   updateLog: vi.fn(),
+  deleteLog: vi.fn(async () => {}),
   listStudentLogs: vi.fn(async () => []),
   listRecentLogs: vi.fn(async () => []),
   getStudentTotals: vi.fn(async () => ({ cans: 0, cashCents: 0, canEquivalents: 0 })),
@@ -44,8 +45,9 @@ describe("log routes", () => {
       recent.GET(new NextRequest(url("/recent"))),
       totals.GET(new NextRequest(url("/totals?studentId=7"))),
       one.PATCH(json("PATCH", `/${ID}`, { method: "cans", cans: 5 }), ctx),
+      one.DELETE(new NextRequest(url(`/${ID}`), { method: "DELETE" }), ctx),
     ]);
-    expect(responses.map((r) => r.status)).toEqual([401, 401, 401, 401, 401]);
+    expect(responses.map((r) => r.status)).toEqual([401, 401, 401, 401, 401, 401]);
     for (const fn of Object.values(db)) expect(fn).not.toHaveBeenCalled();
   });
 
@@ -61,5 +63,23 @@ describe("log routes", () => {
     db.createLog.mockRejectedValueOnce(new SubmissionConflictError());
     const res = await logs.POST(json("POST", "", { id: ID, studentId: "7", method: "cans", cans: 5 }));
     expect(res.status).toBe(409);
+  });
+
+  it("delete a log with 204, and reject an invalid id with 400 before touching the database", async () => {
+    const bad = await one.DELETE(new NextRequest(url("/nope"), { method: "DELETE" }), {
+      params: Promise.resolve({ id: "nope" }),
+    });
+    expect(bad.status).toBe(400);
+    expect(db.deleteLog).not.toHaveBeenCalled();
+    const ok = await one.DELETE(new NextRequest(url(`/${ID}`), { method: "DELETE" }), ctx);
+    expect(ok.status).toBe(204);
+    expect(db.deleteLog).toHaveBeenCalledWith(ID);
+  });
+
+  it("answer 502 when the delete fails in the database", async () => {
+    db.deleteLog.mockRejectedValueOnce(new Error("db down"));
+    vi.spyOn(console, "error").mockImplementationOnce(() => {});
+    const res = await one.DELETE(new NextRequest(url(`/${ID}`), { method: "DELETE" }), ctx);
+    expect(res.status).toBe(502);
   });
 });
