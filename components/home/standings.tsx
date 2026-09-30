@@ -205,9 +205,10 @@ function FitName({ name }: { name: string }) {
     return () => window.removeEventListener("resize", fit);
   }, [name]);
   return (
-    // The .8 line box is shorter than the glyphs. The padding covers the font's deepest descender
-    // (0.216em, measured in Big Shoulders) so g, j, p, q and y never reach the line below.
-    <span ref={ref} className="w-fit pb-[.22em] font-display text-[88px] leading-[.8] font-black whitespace-nowrap">
+    // The .8 line box is shorter than the glyphs. The padding ends the box at the font's deepest
+    // descender (0.216em, measured in Big Shoulders) so g, j, p, q and y never reach the line below;
+    // -mb-0.5 trims the gap under it to match the space above the name (~10px of visible gap).
+    <span ref={ref} className="-mb-0.5 w-fit pb-[.2em] font-display text-[88px] leading-[.8] font-black whitespace-nowrap">
       {name}
     </span>
   );
