@@ -1,6 +1,5 @@
 "use client";
 
-import Script from "next/script";
 import { useEffect, useRef, useState } from "react";
 import {
   checkCollectionStreet,
@@ -17,8 +16,9 @@ const API_KEY = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY;
 const MAP_ID =
   process.env.NEXT_PUBLIC_GOOGLE_MAP_ID || (process.env.NODE_ENV === "development" ? "DEMO_MAP_ID" : undefined);
 
+const READY_CALLBACK = "__canDriveMapsReady";
 const SCRIPT_SRC = API_KEY
-  ? `https://maps.googleapis.com/maps/api/js?key=${encodeURIComponent(API_KEY)}&v=weekly&loading=async`
+  ? `https://maps.googleapis.com/maps/api/js?key=${encodeURIComponent(API_KEY)}&v=weekly&loading=async&callback=${READY_CALLBACK}`
   : null;
 
 const LOAD_ERROR = "The map couldn't load. Refresh the page to try again.";
@@ -37,7 +37,35 @@ declare global {
   interface Window {
     /** Called by the Maps script when the key is invalid or not allowed here. */
     gm_authFailure?: () => void;
+    [READY_CALLBACK]?: () => void;
   }
+}
+
+let mapsLoading: Promise<void> | null = null;
+
+/**
+ * Adds the Maps script once per page load. With loading=async,
+ * google.maps.importLibrary only exists once Google calls the callback, not at
+ * the script's load event, which is why this isn't next/script's onReady.
+ */
+function loadMaps(src: string): Promise<void> {
+  if (typeof google !== "undefined" && typeof google.maps?.importLibrary === "function") return Promise.resolve();
+  mapsLoading ??= new Promise<void>((resolve, reject) => {
+    const script = document.createElement("script");
+    window[READY_CALLBACK] = () => {
+      delete window[READY_CALLBACK];
+      resolve();
+    };
+    script.src = src;
+    script.async = true;
+    script.onerror = () => {
+      mapsLoading = null;
+      script.remove();
+      reject(new Error("Maps script failed to load"));
+    };
+    document.head.append(script);
+  });
+  return mapsLoading;
 }
 
 export function CollectionMap() {
@@ -73,27 +101,22 @@ export function CollectionMap() {
 function StreetPicker() {
   const searchRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<HTMLDivElement>(null);
-  const [scriptReady, setScriptReady] = useState(false);
   const [loadError, setLoadError] = useState<string | null>(null);
   // The future reservation form will read the chosen street from this state.
   const [status, setStatus] = useState<Status>({ kind: "idle" });
 
   useEffect(() => {
-    window.gm_authFailure = () => setLoadError(LOAD_ERROR);
-    return () => {
-      delete window.gm_authFailure;
-    };
-  }, []);
-
-  useEffect(() => {
-    if (!scriptReady || !searchRef.current || !mapRef.current) return;
+    if (!searchRef.current || !mapRef.current) return;
     const searchHost = searchRef.current;
     const mapHost = mapRef.current;
     let cancelled = false;
     let latest = 0;
     let cleanup = () => {};
+    window.gm_authFailure = () => setLoadError(LOAD_ERROR);
 
     (async () => {
+      await loadMaps(SCRIPT_SRC!);
+      if (cancelled) return;
       const [{ Map }, { AdvancedMarkerElement }, { PlaceAutocompleteElement }] = await Promise.all([
         google.maps.importLibrary("maps") as Promise<google.maps.MapsLibrary>,
         google.maps.importLibrary("marker") as Promise<google.maps.MarkerLibrary>,
@@ -119,7 +142,6 @@ function StreetPicker() {
         includedPrimaryTypes: ["route"],
         placeholder: "e.g. Huron Church Road",
       });
-      search.id = "street-search";
       search.setAttribute("aria-label", "Search for a street");
       searchHost.replaceChildren(search);
 
@@ -165,19 +187,19 @@ function StreetPicker() {
     return () => {
       cancelled = true;
       cleanup();
+      delete window.gm_authFailure;
     };
-  }, [scriptReady]);
+  }, []);
 
   if (loadError) return <Unavailable message={loadError} />;
 
   return (
     <>
-      <Script src={SCRIPT_SRC!} onReady={() => setScriptReady(true)} onError={() => setLoadError(LOAD_ERROR)} />
-
       <div className="flex min-w-0 flex-col gap-3 lg:col-start-2 lg:row-span-2 lg:row-start-1">
-        <label htmlFor="street-search" className="font-mono text-[11px] font-semibold tracking-[.14em] text-muted lg:text-xs">
+        {/* Google's input lives in a closed shadow root, so a <label> can't reach it; it is named by aria-label. */}
+        <span aria-hidden className="font-mono text-[11px] font-semibold tracking-[.14em] text-muted lg:text-xs">
           SEARCH FOR A STREET
-        </label>
+        </span>
         <div
           ref={searchRef}
           className="street-search min-h-12 border-2 border-ink bg-field focus-within:outline-3 focus-within:outline-offset-2 focus-within:outline-butter"
