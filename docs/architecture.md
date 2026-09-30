@@ -35,7 +35,7 @@ components/
   can.tsx             the CSS can (progress meter + podium block)
   ticket.tsx          torn-stub reward ticket
   marks.tsx           marker underline, rubber stamp, school crest (public/acslogo.png)
-  home/               one file per homepage section
+  home/               one file per homepage section (grade-wars/ is a folder: section, date panel, podium, breakdown)
 lib/
   homepage.server.ts  getHomepageData(): reads Supabase, the only source of homepage figures
   homepage.ts         types, buildHomepageData() (pure aggregation), display helpers
@@ -267,7 +267,7 @@ Set both variables in Vercel (Production and Preview). They are read at **build*
 
 ## Data boundary
 
-The homepage reads **live data** from Supabase. Every figure comes from **`getHomepageData()`** in `lib/homepage.server.ts`. `app/page.tsx` calls it once and passes plain props down; no section imports data itself.
+The homepage reads **live data** from Supabase. Every live figure comes from **`getHomepageData()`** in `lib/homepage.server.ts`. `app/page.tsx` calls it once and passes plain props down; no section imports data itself. The one exception is [Grade Wars](#grade-wars-demo-data), which still shows demo data and fetches in the browser through its own repository.
 
 ```
 students + donation_logs  --admin client (server only)-->  getHomepageData()
@@ -305,6 +305,10 @@ A daily ranking of Grades 9–12, one collection day at a time, between The Stan
 - **Stale responses** are dropped: a result is shown only if it answers the currently selected day and retry attempt.
 - **Podium height is place, not amount** (4 rows of cans for 1st down to 1 for 4th); the breakdown list is the accessible ranking and the podium is `aria-hidden`. Columns are keyed by grade so they slide on date change; `motion-reduce` makes that instant.
 - **No reward is shown.** The daily recognition for the top grade is unconfirmed; the section says so and nothing more.
+- **Collection days are calendar dates, not instants.** `"2026-10-23"` is formatted by pinning it to noon UTC and formatting in UTC (`lib/grade-wars/format.ts`), so it reads as Oct 23 in every time zone. `new Date("2026-10-23")` would be UTC midnight, which is still Oct 22 in Toronto.
+- **Layout:** below `lg` the podium is a descending staircase (1st to 4th, left to right, 2 cans per row); from `lg` it is the classic podium (2nd, 1st, 3rd, then 4th set apart, 3 cans per row), and from `xl` the ranking list sits beside it. The prompt said to switch at about 768px, but the podium's 800px design width doesn't fit a tablet, so it follows the homepage's `lg`/`xl` convention. Desktop column offsets are percentages of that 800px width, so the podium also fits the 1280px column. One component tree serves both layouts.
+- **States** (all layout-stable): final, in progress ("Leading today", never "winner"), tie ("Tied 1st" tags, shared height and colour), empty (no ranking, no winner), loading and unavailable (with Try again). The date controls work in every state.
+- **Files:** `lib/grade-wars/` holds `types.ts`, `repository.ts`, `rank.ts` (+ tests), `format.ts`, `view.ts` (which tag, note and announcement each state gets), `mock.ts`, `supabase.ts`, `index.ts` and `use-grade-wars.ts`. `components/home/grade-wars/` holds the section, date panel, podium, breakdown, tag and component tests.
 - **Dev switches** (ignored in production builds): `?gw=loading`, `?gw=error`, `?gw=live` (marks the latest day in progress).
 - **To go live:** a public route handler that reads `donation_logs` + `students` with the admin client and returns per-grade, per-Toronto-day `cans`/`cash_cents` sums (see the comment in `lib/grade-wars/supabase.ts`), then implement `SupabaseGradeWarsRepository` against it. Decide first whether a grade with one donor on a day (which reveals that student's amount) is acceptable.
 
@@ -317,6 +321,7 @@ A daily ranking of Grades 9–12, one collection day at a time, between The Stan
 - The street search is Google's combobox, named “Search for a street” with `aria-label` (its input is in a closed shadow root, so a `<label>` can't reach it). It works with Tab, typing, arrow keys and Enter. The chosen street, or the reason it was rejected, is announced from an `aria-live` panel.
 - The mobile menu button has `aria-expanded` and `aria-controls`, and Escape closes the menu.
 - Smooth anchor scrolling only applies under `prefers-reduced-motion: no-preference`.
+- Grade Wars: the day chips are a `role="group"` with a roving tabindex (only the selected chip is in the Tab order), ArrowLeft/ArrowRight/Home/End move the selection and focus with it, and each chip's `aria-label` is the full date ("(latest)" on the last). ←/→ and "Back to latest" use `aria-disabled` at the ends, so focus isn't dropped. The podium is `aria-hidden`; the ranking `<ol>` is the accessible version, and every tie has a text tag. A polite live region announces the new ranking, but only after the visitor acts. Column slides and height changes are off under `prefers-reduced-motion: reduce`.
 
 ## `/docs` route
 
@@ -329,6 +334,7 @@ A daily ranking of Grades 9–12, one collection day at a time, between The Stan
 - Street segments or areas: a claim is a whole street (one Google place), drawn as one marker. Auth is a single admin login table (see Volunteer login).
 - The design-tool runtime (`support.js`).
 - Dark mode (see Visual system).
+- Live Grade Wars data: `SupabaseGradeWarsRepository` throws "Not implemented", and there are no tables, views or routes for it. No realtime updates either (`TODO(realtime)` in `useGradeWars()`).
 
 ## Open items
 
@@ -341,4 +347,5 @@ A daily ranking of Grades 9–12, one collection day at a time, between The Stan
 | Street claims | Owner + build | Built as the simplest version (see [Street claims](#street-claims)). Open: whether impersonation, spam or the browser-trusted street check ever need more than organizers fixing rows in SQL. |
 | Google Cloud key settings | Owner | Apply the referrer and API restrictions in [Collection map](#collection-map), and set both `NEXT_PUBLIC_GOOGLE_*` variables in Vercel. |
 | Incentive details | Organizers | The rewards are confirmed. Still open, if the site should ever decide winners: daily cutoff times, ties, and how the dodgeball qualification order is recorded. |
+| Grade Wars live data | Owner + build | Decide how a day becomes final (end of school day? organizer action?) and whether a grade's daily total may reveal one student's amount (a grade with a single donor that day). Then build the public route and repository (see [Grade Wars](#grade-wars-demo-data)). Any daily recognition for the top grade (e.g. a song announcement) is unconfirmed and not shown. |
 | Baseline migration history | Owner | `supabase/migrations/20260927000000_baseline_schema.sql` is already applied on the remote project but isn't recorded there. Run `pnpm exec supabase login`, then `link --project-ref gcrfsdmkcfywkofhijsi`, then `migration repair --status applied 20260927000000`. The two admin migrations are recorded remotely as `20260929171156` and `20260929200832`, not their local file versions, so repair those too (or rename the files); `20260930140622_street_claims.sql` already matches. |

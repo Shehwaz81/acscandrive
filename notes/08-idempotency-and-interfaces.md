@@ -57,4 +57,6 @@ Why bother:
 
 The word **seam** (from Michael Feathers) means a place where you can swap behaviour without editing the code on either side. The interface is the seam. Keep it narrow and phrased in the UI's terms (`cashCents`, `homeroom`), and let the implementation translate to storage terms (`amount_cents`, `hr`). Then a schema change touches one file, not every component.
 
+Grade Wars (the daily grade ranking) uses the same seam from the other direction. It was built **UI-first**: a `GradeWarsRepository` interface, a mock with the demo figures and URL switches to force loading, error and "in progress", and a real implementation that is only a **stub** whose methods throw "Not implemented". The stub isn't useless: it pins down the contract (the method names and return types) and carries a comment describing the data it will need. Whoever builds the backend implements two methods, and no component changes.
+
 The cost: the mock can drift from reality. Where the rule matters, such as the idempotent create, the mock implements it for real and has tests, so the real implementation had a reference to match. The real one was then checked against the actual database: a reply dropped on purpose after the row was written, then a retry, left exactly one row.

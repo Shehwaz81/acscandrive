@@ -19,5 +19,7 @@ Suggested reading order:
 11. [Derived totals and database error codes](11-derived-totals-and-error-codes.md). Why totals are summed from rows instead of stored, and how Postgres errors (unique, foreign key, check) become HTTP 409/400/502.
 12. [Public pages: send totals, not rows](12-public-aggregates.md). What a public page really publishes, aggregating at the server boundary, how totals can still leak, where to round money to cans, and how a cached page stays fresh.
 13. [Public browser keys: restricted, not hidden](13-public-browser-keys.md). Why a map key has to be visible in the browser, and how referrer, API and quota restrictions limit what a copied key can do.
+14. [Requests that finish out of order](14-out-of-order-responses.md). Why a slow, older response can overwrite a newer one, and how stamping each answer with its question prevents it.
+15. [Calendar dates vs. instants](15-calendar-dates-vs-instants.md). Why `2026-10-23` can display as Oct 22, and how to group moments into local days without off-by-one errors.
 
 Never put real student names or donation records in these notes.
