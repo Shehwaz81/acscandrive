@@ -5,7 +5,7 @@ import { SiteFooter } from "@/components/home/site-footer";
 import { SiteHeader } from "@/components/home/site-header";
 import { Standings } from "@/components/home/standings";
 import { TopDonors } from "@/components/home/top-donors";
-import { ZoneMap } from "@/components/home/zone-map";
+import { CollectionMap } from "@/components/home/collection-map";
 import { getHomepageData } from "@/lib/homepage.server";
 
 // Rebuild in the background at most once a minute; if a rebuild fails, the
@@ -29,7 +29,7 @@ export default async function Home() {
         <Standings homerooms={homerooms} />
         <TopDonors donors={topDonors} />
         <HowToGive />
-        <ZoneMap />
+        <CollectionMap />
       </main>
       <SiteFooter />
     </>

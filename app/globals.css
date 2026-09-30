@@ -85,10 +85,6 @@
   background: repeating-linear-gradient(90deg, var(--color-kraft) 0 6px, var(--color-lid) 6px 9px);
 }
 
-@utility hatch {
-  background: repeating-linear-gradient(135deg, var(--color-ink) 0 2px, var(--color-zone) 2px 7px);
-}
-
 @utility progress-stripes {
   background: repeating-linear-gradient(135deg, var(--color-tomato) 0 8px, var(--color-tomato-dark) 8px 12px);
 }
@@ -96,4 +92,13 @@
 @utility stub-label {
   writing-mode: vertical-rl;
   transform: rotate(180deg);
+}
+
+/* Google's Place Autocomplete element (collection map). It renders its own
+   input in a shadow root; only size, font and colour scheme are set here. */
+.street-search gmp-place-autocomplete {
+  width: 100%;
+  color-scheme: light;
+  font-family: var(--font-sans);
+  border-radius: 0;
 }
