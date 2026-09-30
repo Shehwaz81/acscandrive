@@ -270,13 +270,14 @@ Set both variables in Vercel (Production and Preview). They are read at **build*
 
 ## Data boundary
 
-The homepage reads **live data** from Supabase. Every live figure comes from **`getHomepageData()`** in `lib/homepage.server.ts`. `app/page.tsx` calls it once and passes plain props down; no section imports data itself. The one exception is [Grade Wars](#grade-wars-demo-data), which still shows demo data and fetches in the browser through its own repository.
+The homepage reads **live data** from Supabase. Every live figure comes from **`getHomepageData()`** in `lib/homepage.server.ts`. `app/page.tsx` calls it once and passes plain props down; no section imports data itself. That includes [Grade Wars](#grade-wars): its per-grade daily totals are a regrouping of the same rows.
 
 ```
 students + donation_logs  --admin client (server only)-->  getHomepageData()
    (private rows)                                             |  buildHomepageData(): sums, groups, top 8 today
+                                                              |  buildGradeWars(): per grade, last 5 weekdays
                                                               v
-                                   { goal, total, homerooms[], topDonors[] }  -->  page (static, rebuilt at most once a minute)
+                       { goal, total, homerooms[], topDonors[], gradeWars }  -->  page (static, rebuilt at most once a minute)
 ```
 
 - **How:** `loadRoster()` (paged, reused from the volunteer desk) plus a keyset-paged read of `donation_logs` (`cans` and `cash` only; `online` stays out until refunds are defined). The aggregation is a pure function, `buildHomepageData()` in `lib/homepage.ts`, unit-tested on synthetic students in `lib/homepage.test.ts`.
@@ -285,11 +286,11 @@ students + donation_logs  --admin client (server only)-->  getHomepageData()
 - **Homerooms** are the roster's `hr` values, all 58 of them, including tiny or non-class codes like `Office` or 1-student rooms (the owner's decision; a 1-student room's total reveals that student's amount). Many mix grades, so each has `grades: number[]` ("Grades 10, 11, 12"), and "grade 9" in the search matches any homeroom with a grade 9 student. They're sorted by total, then by room code.
 - **Teachers first** (owner's decision, 2026-09-30): standings rows and the podium name a homeroom by its teacher's surname (`hr_teacher`, read only by `getHomepageData()`; the volunteer roster still never selects it). The selected homeroom card leads with the teacher (88px, shrunk to fit a long name on one line), then "Homeroom 121"; the phone accordion shows "HOMEROOM 121"; clicking a donor's teacher swaps in "Rm 204". A room with several teachers shows them all ("Adams / Baker"); one with none falls back to its code. Some teachers have more than one homeroom, so two rows can share a name until clicked. Search matches teacher or room.
 - **Top donors:** students with the highest can-equivalents **today** (America/Toronto day of `occurred_at`), top 8, shown as **first name + last initial** (owner's decision). Ties are ordered by name for display only; the lunch-voucher tie rule is unconfirmed.
-- **What is public:** the result is serialised into the page, because `Standings` is a client component. It contains only aggregates, each homeroom's teacher surname, and today's top donors ("First L.", homeroom, teacher, total): no student IDs, full student surnames or individual logs. Checked: the rendered page contains no `student_id` or `hr_teacher` key, and no student surname other than ordinary words already in the page copy.
+- **What is public:** the result is serialised into the page, because `Standings` is a client component. It contains only aggregates, each homeroom's teacher surname, today's top donors ("First L.", homeroom, teacher, total) and Grade Wars' per-grade totals for the last five collection days (cans, cash cents, can-equivalents): no student IDs, full student surnames or individual logs. Checked: the rendered page contains no `student_id` or `hr_teacher` key, and no student surname other than ordinary words already in the page copy.
 - **Freshness:** `export const revalidate = 60` (ISR). The page is served from cache and rebuilt in the background at most once a minute, so a saved donation shows up within about a minute. If a rebuild fails (for example, Supabase is down), the last good page keeps being served. `next build` also queries Supabase, so the env vars must be set wherever the site is built.
 - **Why the admin client is acceptable here:** it bypasses RLS and this page has no login. That's safe only because the function returns public aggregates. Adding a field to its result is a publishing decision.
 
-Fixed copy that isn't data lives in `DRIVE` in `lib/site.ts`: the goal (20,000 can-equivalents), drive dates, desk location and hours, and organizer contact.
+Fixed copy that isn't data lives in `DRIVE` in `lib/site.ts`: the goal (20,000 can-equivalents), drive dates (display text plus `startDate`/`endDate`), Grade Wars' `dailyCutoff`, desk location and hours, and organizer contact.
 
 Display helpers used by the client standings are in `lib/homepage.ts`: `homeroomStats` (dodgeball target, percentage, real cans/cash split, status), `matchesQuery` and `gradeLabel`. Move the reward maths into the single incentive-calculation module that `CLAUDE.md` requires once the rules are confirmed.
 
@@ -299,21 +300,25 @@ Display helpers used by the client standings are in `lib/homepage.ts`: `homeroom
 
 Both meters derive the fill, the count and the notes from `(goal, total)` in one place (`progress()` in `hero.tsx`). The percentage is floored, so it never shows 100% while cans are still to go. The fill caps at the rim, and past the goal the notes read “Goal reached! +N over”. On desktop the can's inner box and the tick column are both 300px, so the fill maps 1:1 to the scale, and a pointer sits exactly on the fill line. Each meter is `role="img"` with a full `aria-label`.
 
-## Grade Wars (demo data)
+## Grade Wars
 
-A daily ranking of Grades 9–12, one collection day at a time, between The Standings and Top Donors. It is **frontend only**: every figure is fictional and labelled "DEMO DATA".
+A daily ranking of Grades 9–12, one collection day at a time, between The Standings and Top Donors. It shows live data computed by `getHomepageData()`.
 
-- **Seam:** the UI reads only through `useGradeWars()`, which calls a `GradeWarsRepository` (`lib/grade-wars/`). `NEXT_PUBLIC_DATA_SOURCE` picks the implementation: `mock` (default) or `supabase`, which is a stub whose methods throw "Not implemented". Unlike the other homepage sections it fetches in the browser, not through `getHomepageData()`.
-- **Ranking** is the pure, tested `rankDay()`: can-equivalents via `toCanEquivalents()` (the same `canEquivalents()` rule as everywhere else), competition ranking (305, 305, 270, 240 → 1, 1, 3, 4), no tiebreaker; equal totals list by grade for display only.
+- **Where the numbers come from:** `buildGradeWars(students, logs, now)` (`lib/grade-wars/build.ts`, pure and unit-tested) regroups the roster and counted logs that `getHomepageData()` already loads, so it adds no query, route or browser fetch. `app/page.tsx` passes the result as `<GradeWars data={gradeWars} />`, and `PrecomputedGradeWarsRepository` serves it from memory through the same `GradeWarsRepository` → `useGradeWars()` seam the UI was built against. At most 5 days × 4 grades reach the page.
+- **Which days (owner's rules, 2026-09-30):** every weekday from `DRIVE.startDate` (Oct 5) through today, capped at `DRIVE.endDate` (Oct 23), including weekdays with no logs (Thanksgiving Monday shows as a day with no donations). Weekends never appear and weekend logs are ignored, because logging isn't possible then. Only the last 5 are listed, ascending; on a Saturday or Sunday the last is Friday. Logs outside the drive dates (such as September test entries) are ignored.
+- **Final vs. in progress:** today is in progress until `DRIVE.dailyCutoff` (8:10 a.m., when the desk closes) in Toronto wall-clock time, read with `torontoClock()` (never a fixed UTC offset), then final. Earlier days are always final. "Final" is a label, not a snapshot: logs still count by the Toronto day of `occurred_at`, including entries timed after 8:10 and later corrections.
+- **Totals:** grade is the student's roster grade, looked up by `student_id`; logs for students missing from the roster or outside Grades 9–12 are skipped. Rounding follows the homepage: each student's day is `canEquivalents(cans, cents)`, then grades sum. Each grade also keeps its raw `cans` and `cashCents` for the "318 cans + $102 cash" line. Every day has exactly four totals, zero-filled.
+- **Ranking** is the pure, tested `rankDay()`. It ranks by each grade's `total` (the per-student sum) and never re-rounds the grade's summed cash, which can come out higher (two students' $0.50 would give 1 instead of 0 + 0). That way the ranking and the shown numbers always agree. It uses competition ranking (305, 305, 270, 240 → 1, 1, 3, 4) with no tiebreaker; equal totals list by grade for display only.
+- **Before the drive** there are no days, and the section shows a stable "Grade Wars starts Monday, October 5" card instead of loading forever.
+- **Privacy:** nothing is suppressed, even when one student is a grade's only donor on a day, which reveals that student's amount. The owner judged this rare, and Top Donors already publishes more ("First L.", homeroom and today's total).
+- **Hydration tradeoff (accepted):** the section is a client component and its repository resolves asynchronously, so the server HTML shows the loading placeholder and the figures appear as soon as the page's JavaScript runs. The layout doesn't shift between the two. Freshness is the homepage's: rebuilt at most once a minute, so "today" and the in-progress label can lag by about that much.
 - **Stale responses** are dropped: a result is shown only if it answers the currently selected day and retry attempt.
 - **Podium height is place, not amount** (4 rows of cans for 1st down to 1 for 4th); the breakdown list is the accessible ranking and the podium is `aria-hidden`. Columns are keyed by grade so they slide on date change; `motion-reduce` makes that instant.
 - **No reward is shown.** The daily recognition for the top grade is unconfirmed; the section says so and nothing more.
 - **Collection days are calendar dates, not instants.** `"2026-10-23"` is formatted by pinning it to noon UTC and formatting in UTC (`lib/grade-wars/format.ts`), so it reads as Oct 23 in every time zone. `new Date("2026-10-23")` would be UTC midnight, which is still Oct 22 in Toronto.
 - **Layout:** below `lg` the podium is a descending staircase (1st to 4th, left to right, 2 cans per row); from `lg` it is the classic podium (2nd, 1st, 3rd, then 4th set apart, 3 cans per row), and from `xl` the ranking list sits beside it. The prompt said to switch at about 768px, but the podium's 800px design width doesn't fit a tablet, so it follows the homepage's `lg`/`xl` convention. Desktop column offsets are percentages of that 800px width, so the podium also fits the 1280px column. One component tree serves both layouts.
-- **States** (all layout-stable): final, in progress ("Leading today", never "winner"), tie ("Tied 1st" tags, shared height and colour), empty (no ranking, no winner), loading and unavailable (with Try again). The date controls work in every state.
-- **Files:** `lib/grade-wars/` holds `types.ts`, `repository.ts`, `rank.ts` (+ tests), `format.ts`, `view.ts` (which tag, note and announcement each state gets), `mock.ts`, `supabase.ts`, `index.ts` and `use-grade-wars.ts`. `components/home/grade-wars/` holds the section, date panel, podium, breakdown, tag and component tests.
-- **Dev switches** (ignored in production builds): `?gw=loading`, `?gw=error`, `?gw=live` (marks the latest day in progress).
-- **To go live:** a public route handler that reads `donation_logs` + `students` with the admin client and returns per-grade, per-Toronto-day `cans`/`cash_cents` sums (see the comment in `lib/grade-wars/supabase.ts`), then implement `SupabaseGradeWarsRepository` against it. Decide first whether a grade with one donor on a day (which reveals that student's amount) is acceptable.
+- **States** (all layout-stable): final, in progress ("Leading today", never "winner"), tie ("Tied 1st" tags, shared height and colour), empty (no ranking, no winner), not started, loading and unavailable (with Try again).
+- **Files:** `lib/grade-wars/` holds `types.ts`, `repository.ts`, `build.ts` and `rank.ts` (+ tests), `precomputed.ts`, `format.ts`, `view.ts` (which tag, note and announcement each state gets), `use-grade-wars.ts`, and `mock.ts` (fictional figures, a test fixture only). `components/home/grade-wars/` holds the section, date panel, podium, breakdown, tag and component tests.
 
 ## Accessibility
 
@@ -337,7 +342,6 @@ A daily ranking of Grades 9–12, one collection day at a time, between The Stan
 - Street segments or areas: a claim is a whole street (one Google place), drawn as one marker. Auth is a single admin login table (see Volunteer login).
 - The design-tool runtime (`support.js`).
 - Dark mode (see Visual system).
-- Live Grade Wars data: `SupabaseGradeWarsRepository` throws "Not implemented", and there are no tables, views or routes for it. No realtime updates either (`TODO(realtime)` in `useGradeWars()`).
 
 ## Open items
 
@@ -350,5 +354,5 @@ A daily ranking of Grades 9–12, one collection day at a time, between The Stan
 | Street claims | Owner + build | Built as the simplest version (see [Street claims](#street-claims)). Open: whether impersonation, spam or the browser-trusted street check ever need more than organizers fixing rows in SQL. |
 | Google Cloud key settings | Owner | Apply the referrer and API restrictions in [Collection map](#collection-map), and set both `NEXT_PUBLIC_GOOGLE_*` variables in Vercel. |
 | Incentive details | Organizers | The rewards are confirmed. Still open, if the site should ever decide winners: daily cutoff times, ties, and how the dodgeball qualification order is recorded. |
-| Grade Wars live data | Owner + build | Decide how a day becomes final (end of school day? organizer action?) and whether a grade's daily total may reveal one student's amount (a grade with a single donor that day). Then build the public route and repository (see [Grade Wars](#grade-wars-demo-data)). Any daily recognition for the top grade (e.g. a song announcement) is unconfirmed and not shown. |
+| Grade Wars recognition | Owner | Settled (2026-09-30): weekdays only, last 5 days, final at 8:10 a.m., per-student rounding, no suppression (see [Grade Wars](#grade-wars)). Any daily recognition for the top grade (e.g. a song announcement) is unconfirmed and not shown. |
 | Baseline migration history | Owner | `supabase/migrations/20260927000000_baseline_schema.sql` is already applied on the remote project but isn't recorded there. Run `pnpm exec supabase login`, then `link --project-ref gcrfsdmkcfywkofhijsi`, then `migration repair --status applied 20260927000000`. The two admin migrations are recorded remotely as `20260929171156` and `20260929200832`, not their local file versions, so repair those too (or rename the files); `20260930140622_street_claims.sql` already matches. |

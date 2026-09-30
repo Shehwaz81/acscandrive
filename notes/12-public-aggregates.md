@@ -31,7 +31,7 @@ A total is not automatically anonymous:
 - **Differences over time.** A total that jumps by 40 right after someone was seen at the desk tells you what they gave.
 - **Named lists are a disclosure by design.** "Top donors" publishes names and amounts on purpose, so it needs the organizer's decision on how names appear (for example, first name + initial) and whether students can opt out.
 
-For a school can drive, these risks are small and accepted. But they are real choices, not side effects. In this app, the owner chose to show every homeroom, including 1-student ones, and to show top donors as first name + last initial.
+For a school can drive, these risks are small and accepted. But they are real choices, not side effects. In this app, the owner chose to show every homeroom, including 1-student ones, and to show top donors as first name + last initial. Grade Wars' daily per-grade totals aren't suppressed either, even on a day when one student is a grade's only donor: rare, and less than the top donors list already shows.
 
 ## One source for every figure
 
@@ -40,6 +40,8 @@ The hero's fill level, its number, "62% there" and "7,520 to go" are all compute
 ## Rounding once, at a defined level
 
 Converting money to "cans" loses the partial dollars, so *where* you round changes the answer. Two students giving $1.50 each is 1 + 1 = 2 if you round per student, but 3 if you add the $3.00 first. This app rounds **per student**, then adds whole numbers upward (homeroom, then school). That way every level agrees with the student totals volunteers see. The alternative gives slightly bigger totals that no longer add up.
+
+The trap comes back whenever the same rows are **regrouped**. Grade Wars groups by grade and day instead of by homeroom, and each grade also shows its raw cans and cash. It's tempting to rank grades by converting that summed cash again, but that is rounding at the grade level: two students' $0.50 would become 1 instead of 0 + 0. The rule has to be applied at the same level (the student, on that day) in every grouping, and anything that sorts or compares must use the same rounded numbers that are displayed.
 
 ## Static pages and fresh numbers
 

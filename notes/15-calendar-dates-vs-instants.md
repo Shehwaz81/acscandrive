@@ -21,6 +21,12 @@ Grouping donations "by day" turns instants into calendar dates, and you must say
 
 In SQL that looks like `(occurred_at at time zone 'America/Toronto')::date`. In JavaScript, it's a formatter with `timeZone: "America/Toronto"` (see `torontoDayKey()` in `lib/volunteer/time.ts`).
 
+## Wall-clock times and weekdays
+
+A **cutoff** like "final at 8:10 a.m." is a wall-clock time on a local calendar, just like a calendar date. To test "is it past 8:10 in Toronto?", format the current instant as Toronto hours and minutes (`torontoClock()` returns `"08:10"`, which compares correctly as a string) rather than adding a fixed offset to UTC. The same instant is 12:10 UTC in October but 13:10 UTC in December.
+
+**Which weekday** a calendar date falls on is also a calendar question. Build noon UTC on that date and ask for the UTC weekday: no zone conversion happens, so the answer can't shift. Walking a range of dates works the same way: step one day at a time in UTC, where every day is exactly 24 hours, so a daylight-saving change can't skip or repeat a date.
+
 ## Rules of thumb
 
 1. Store moments as instants (`timestamptz`) and days as dates (`date`). Don't store a day as midnight of some zone.
