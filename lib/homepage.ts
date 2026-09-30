@@ -10,6 +10,8 @@ import type { Student } from "./volunteer/types";
 
 export type Homeroom = {
   room: string;
+  /** Homeroom teacher's surname(s), shown before the room code. */
+  teacher: string;
   /** Grades of the students in it; many homerooms mix grades. Ascending. */
   grades: number[];
   students: number;
@@ -20,8 +22,8 @@ export type Homeroom = {
   cashCents: number;
 };
 
-/** A top donor as shown publicly: "First L.", homeroom and today's can-equivalents. */
-export type Donor = { name: string; room: string; cans: number };
+/** A top donor as shown publicly: "First L.", homeroom, its teacher and today's can-equivalents. */
+export type Donor = { name: string; room: string; teacher: string; cans: number };
 
 export type HomepageData = {
   /** School goal in can-equivalents. */
@@ -42,7 +44,23 @@ export type LogRow = {
   occurred_at: string;
 };
 
+/** The columns the teacher labels need from a `students` row. */
+export type TeacherRow = { hr: string; hr_teacher: string };
+
 const TOP_DONORS = 8;
+
+/**
+ * Room code → teacher label. A room with several teachers lists them all
+ * ("Adams / Baker"); the roster doesn't promise one teacher per room.
+ */
+export function teacherLabels(rows: TeacherRow[]): Map<string, string> {
+  const byRoom = new Map<string, Set<string>>();
+  for (const r of rows) {
+    const t = r.hr_teacher.trim();
+    if (t) byRoom.set(r.hr, (byRoom.get(r.hr) ?? new Set()).add(t));
+  }
+  return new Map([...byRoom].map(([room, ts]) => [room, [...ts].sort().join(" / ")]));
+}
 
 /**
  * Rounding rule: each student's total is canEquivalents(their cans, their
@@ -55,7 +73,10 @@ export function buildHomepageData(
   logs: LogRow[],
   goal: number,
   now: Date = new Date(),
+  /** From teacherLabels(); a room without one falls back to its code. */
+  teachers: ReadonlyMap<string, string> = new Map(),
 ): HomepageData {
+  const teacherOf = (room: string) => teachers.get(room) ?? room;
   const allTime = new Map<string, { cans: number; cents: number }>();
   const today = new Map<string, { cans: number; cents: number }>();
   const add = (m: typeof allTime, id: string, l: LogRow) => {
@@ -75,6 +96,7 @@ export function buildHomepageData(
   for (const st of students) {
     const r = rooms.get(st.homeroom) ?? {
       room: st.homeroom,
+      teacher: teacherOf(st.homeroom),
       grades: [],
       gradeSet: new Set<number>(),
       students: 0,
@@ -95,7 +117,7 @@ export function buildHomepageData(
     const t = today.get(st.id);
     const todayTotal = t ? canEquivalents(t.cans, t.cents) : 0;
     if (todayTotal > 0) {
-      donors.push({ name: publicName(st), room: st.homeroom, cans: todayTotal, lastName: st.lastName });
+      donors.push({ name: publicName(st), room: st.homeroom, teacher: teacherOf(st.homeroom), cans: todayTotal, lastName: st.lastName });
     }
   }
 
@@ -106,7 +128,7 @@ export function buildHomepageData(
   const topDonors = donors
     .sort((a, b) => b.cans - a.cans || a.name.localeCompare(b.name) || a.lastName.localeCompare(b.lastName))
     .slice(0, TOP_DONORS)
-    .map((d) => ({ name: d.name, room: d.room, cans: d.cans }));
+    .map((d) => ({ name: d.name, room: d.room, teacher: d.teacher, cans: d.cans }));
 
   return { goal, total: homerooms.reduce((sum, h) => sum + h.total, 0), homerooms, topDonors };
 }
@@ -150,11 +172,11 @@ export function homeroomStats(h: Homeroom) {
 /**
  * Standings search: "grade 9" or "g9" matches homerooms with grade 9
  * students, a bare 9–12 also matches a grade, anything else matches part of
- * the homeroom code.
+ * the teacher's name or the homeroom code.
  */
 export function matchesQuery(h: Homeroom, rawQuery: string) {
   const q = rawQuery.trim().toLowerCase().replace(/^grade\s*/, "g");
   if (!q) return true;
   if (/^g\d+$/.test(q)) return h.grades.includes(Number(q.slice(1)));
-  return h.room.toLowerCase().includes(q) || h.grades.includes(Number(q));
+  return h.teacher.toLowerCase().includes(q) || h.room.toLowerCase().includes(q) || h.grades.includes(Number(q));
 }

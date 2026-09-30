@@ -68,7 +68,7 @@ export function Standings({ homerooms }: { homerooms: Homeroom[] }) {
               type="search"
               value={query}
               onChange={(e) => setQuery(e.target.value)}
-              placeholder="Try 204 or grade 9"
+              placeholder="Try a teacher or grade 9"
               className="h-[52px] w-full min-w-0 bg-paper px-3.5 text-[17px] text-ink shadow-[inset_0_-4px_0_var(--color-butter)] placeholder:text-muted focus-visible:shadow-[inset_0_-4px_0_var(--color-tomato),0_0_0_3px_var(--color-butter)] focus-visible:outline-none xl:px-4"
             />
           </label>
@@ -78,7 +78,7 @@ export function Standings({ homerooms }: { homerooms: Homeroom[] }) {
           <div className="flex flex-col">
             <div
               aria-hidden
-              className="hidden grid-cols-[96px_minmax(0,1fr)_170px_220px] gap-4 border-b-2 border-paper px-5 pb-3 font-mono text-[11.5px] font-semibold tracking-[.1em] text-rule xl:grid"
+              className="hidden grid-cols-[72px_minmax(0,1fr)_130px_190px] gap-4 border-b-2 border-paper px-5 pb-3 font-mono text-[11.5px] font-semibold tracking-[.1em] text-rule xl:grid"
             >
               <span>RANK</span>
               <span>HOMEROOM</span>
@@ -152,8 +152,8 @@ function Row({
       type="button"
       onClick={onClick}
       aria-pressed={selected}
-      aria-label={`${h.room}, ${gradeLabel(h)}, rank ${h.rank}, ${fmt(h.total)} can-equivalents`}
-      className={`grid min-h-[60px] w-full grid-cols-[58px_minmax(0,1fr)_auto] items-center gap-3 px-3 py-2.5 text-left xl:min-h-16 xl:grid-cols-[96px_minmax(0,1fr)_170px_220px] xl:gap-4 xl:px-5 xl:py-3 ${fg} ${selected ? "bg-butter" : "hover:bg-paper/5"}`}
+      aria-label={`${h.teacher}, homeroom ${h.room}, ${gradeLabel(h)}, rank ${h.rank}, ${fmt(h.total)} can-equivalents`}
+      className={`grid min-h-[60px] w-full grid-cols-[58px_minmax(0,1fr)_auto] items-center gap-3 px-3 py-2.5 text-left xl:min-h-16 xl:grid-cols-[72px_minmax(0,1fr)_130px_190px] xl:gap-4 xl:px-5 xl:py-3 ${fg} ${selected ? "bg-butter" : "hover:bg-paper/5"}`}
     >
       <span className="flex items-baseline gap-0.5 xl:gap-1">
         <span className="font-display text-[32px] leading-none font-black xl:text-[40px]">
@@ -161,8 +161,8 @@ function Row({
         </span>
         <span className="text-[11px] font-bold xl:text-[13px]">{ordinalSuffix(h.rank)}</span>
       </span>
-      <span className="flex flex-col gap-0.5 xl:flex-row xl:items-center xl:gap-3">
-        <span className="font-display text-2xl leading-none font-extrabold xl:text-[28px]">{h.room}</span>
+      <span className="flex flex-col gap-0.5 xl:flex-row xl:flex-wrap xl:items-center xl:gap-x-3 xl:gap-y-1">
+        <span className="font-display text-2xl leading-none font-extrabold xl:text-[28px] xl:break-words">{h.teacher}</span>
         <span className="text-[12.5px] xl:text-[13px] xl:font-semibold">
           <span className="xl:hidden">
             {gradeLabel(h)}
@@ -202,6 +202,9 @@ function InlineDetail({ h }: { h: Ranked }) {
   const s = homeroomStats(h);
   return (
     <div className="flex flex-col gap-2.5 bg-paper px-4 pt-4 pb-[18px] text-ink xl:hidden">
+      <span className="font-mono text-[11.5px] font-semibold tracking-[.12em] text-muted">
+        HOMEROOM {h.room}
+      </span>
       <span className="text-[13px] font-semibold">
         Dodgeball target · {h.students} students × 10
       </span>
@@ -234,7 +237,7 @@ function DetailCard({ h }: { h: Ranked }) {
           </span>
           <span className="font-display text-[88px] leading-[.8] font-black">{h.room}</span>
           <span className="text-[15px]">
-            {gradeLabel(h)} · Rank {h.rank} · {h.students} students
+            {h.teacher} · {gradeLabel(h)} · Rank {h.rank} · {h.students} students
           </span>
         </div>
         <Can variant="meter" fill={s.pct} className="h-[118px] w-[84px]" bodyClassName="bg-transparent" />

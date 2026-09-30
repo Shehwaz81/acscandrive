@@ -1,5 +1,6 @@
 import { Can } from "@/components/can";
 import { MarkerUnderline } from "@/components/marks";
+import { TeacherRoom } from "@/components/home/teacher-room";
 import type { Donor } from "@/lib/homepage";
 import { WRAP } from "@/lib/site";
 
@@ -127,7 +128,7 @@ function Podium({ donors }: { donors: Donor[] }) {
                     <>
                       <span className="font-display text-[17px] leading-none font-extrabold md:text-2xl">{d.name}</span>
                       <span className="text-[11px] md:text-[13px]">
-                        {d.room} · <b>{d.cans}<span className="hidden md:inline"> cans</span></b>
+                        <TeacherRoom teacher={d.teacher} room={d.room} /> · <b>{d.cans}<span className="hidden md:inline"> cans</span></b>
                       </span>
                     </>
                   ) : (
@@ -158,7 +159,9 @@ function RunnerUp({ donor, place, className }: { donor: Donor; place: number; cl
       </span>
       <span className="text-[15px] font-semibold lg:text-base">{donor.name}</span>
       <span aria-hidden className="flex-1 -translate-y-1 border-b-2 border-dotted border-dot" />
-      <span className="text-[12.5px] text-muted lg:text-[13px]">{donor.room}</span>
+      <span className="text-[12.5px] text-muted lg:text-[13px]">
+        <TeacherRoom teacher={donor.teacher} room={donor.room} />
+      </span>
       <span className="w-[34px] text-right font-display text-[22px] leading-none font-extrabold lg:w-11 lg:text-2xl">
         {donor.cans}
       </span>
