@@ -11,8 +11,13 @@ import { publicName } from "./homepage";
 /** A claim as the public sees it. The claimer is "First L. (HR)", nothing else. */
 export type PublicClaim = { placeId: string; address: string; lat: number; lng: number; claimer: string };
 
-/** A name-picker suggestion: the public label and an opaque, server-sealed reference to the student. */
-export type StudentOption = { ref: string; label: string };
+/**
+ * A name-picker suggestion: "Maya R." and "10B" (together, the public label)
+ * and an opaque, server-sealed reference to the student.
+ */
+export type StudentOption = { ref: string; name: string; homeroom: string };
+
+export const optionLabel = (o: Pick<StudentOption, "name" | "homeroom">) => `${o.name} (${o.homeroom})`;
 
 export type ClaimInput = { student: string; placeId: string; address: string; lat: number; lng: number };
 export type DeleteInput = { student: string; placeId: string };
@@ -32,7 +37,7 @@ export type ClaimRow = { place_id: string; address: string; lat: number; lng: nu
 
 /** "Maya R. (10B)", like top donors plus the homeroom. */
 export function claimerLabel(s: { firstName: string; lastName: string; homeroom: string }): string {
-  return `${publicName(s)} (${s.homeroom.trim()})`;
+  return optionLabel({ name: publicName(s), homeroom: s.homeroom.trim() });
 }
 
 export function toPublicClaim(r: ClaimRow): PublicClaim {

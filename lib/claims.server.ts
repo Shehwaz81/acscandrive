@@ -1,10 +1,10 @@
 import "server-only";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { publicName } from "@/lib/homepage";
 import { loadRoster } from "@/lib/volunteer/roster.server";
 import { searchStudents } from "@/lib/volunteer/search";
 import {
   buildClaims,
-  claimerLabel,
   MAX_OPTIONS,
   MIN_QUERY,
   toPublicClaim,
@@ -62,7 +62,11 @@ export async function suggestStudents(query: string): Promise<StudentOption[]> {
   if (query.replace(/\s/g, "").length < MIN_QUERY) return [];
   const { exact } = searchStudents(await loadRoster(), query);
   const key = secret();
-  return exact.slice(0, MAX_OPTIONS).map((s) => ({ ref: sealStudentRef(Number(s.id), key), label: claimerLabel(s) }));
+  return exact.slice(0, MAX_OPTIONS).map((s) => ({
+    ref: sealStudentRef(Number(s.id), key),
+    name: publicName(s),
+    homeroom: s.homeroom.trim(),
+  }));
 }
 
 async function readClaim(placeId: string) {

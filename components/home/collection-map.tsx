@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useId, useRef, useState, type FormEvent, type ReactNode } from "react";
-import type { PublicClaim } from "@/lib/claims";
+import { MAX_OPTIONS, MIN_QUERY, optionLabel, PICK_AGAIN_MESSAGE, type PublicClaim, type StudentOption } from "@/lib/claims";
 import {
   checkCollectionStreet,
   ESSEX_COUNTY_BOUNDS,
@@ -26,15 +26,12 @@ const LOAD_ERROR = "The map couldn't load. Refresh the page to try again.";
 const SEARCH_ERROR = "Search isn't available right now. Try again in a moment.";
 const CLAIMS_ERROR = "Claimed streets couldn't load. Refresh the page to try again.";
 const NETWORK_ERROR = "Couldn't reach the server. Check your connection and try again.";
-const MISSING_FIELDS = "Enter your full name and pick your homeroom.";
+const PICK_NAME = "Pick your name from the list.";
 
 // Claim pins use the ink and paper tokens; Maps needs raw colours, not classes.
 const PIN = { background: "#1b1a17", borderColor: "#1b1a17", glyphColor: "#f4eee2" };
 
 type Picked = { placeId: string; street: string; municipality: string; lat: number; lng: number };
-
-/** Who is claiming or deleting. Kept across streets so a student types it once. */
-type Who = { name: string; homeroom: string };
 
 type Status =
   | { kind: "idle" }
@@ -124,11 +121,12 @@ async function send(method: "POST" | "DELETE", body: object) {
     body: JSON.stringify(body),
   });
   const data = (await res.json().catch(() => null)) as { error?: string; claim?: PublicClaim } | null;
-  return { status: res.status, data };
+  // A ref the server can't open (e.g. SESSION_SECRET rotated): the student picks their name again.
+  if (res.status === 400 && data?.error === "pick-again") return { status: res.status, data, pickAgain: true };
+  return { status: res.status, data, pickAgain: false };
 }
 
-/** `homerooms`: the roster's homeroom codes, already public on the standings. */
-export function CollectionMap({ homerooms }: { homerooms: string[] }) {
+export function CollectionMap() {
   const configured = !!(SCRIPT_SRC && MAP_ID);
 
   return (
@@ -148,13 +146,13 @@ export function CollectionMap({ homerooms }: { homerooms: string[] }) {
             your street
           </h2>
           <p className="text-[15.5px] leading-normal text-pretty lg:text-[17px]">
-            Search for the street you plan to collect on and claim it with your name and homeroom. Each street
-            has one collector.
+            Search for the street you plan to collect on, then claim it under your name. Each street has one
+            collector.
           </p>
         </div>
 
         {configured ? (
-          <StreetPicker homerooms={homerooms} />
+          <StreetPicker />
         ) : (
           <Unavailable message="The collection map isn't set up yet. Check back soon." />
         )}
@@ -163,7 +161,7 @@ export function CollectionMap({ homerooms }: { homerooms: string[] }) {
   );
 }
 
-function StreetPicker({ homerooms }: { homerooms: string[] }) {
+function StreetPicker() {
   const searchRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<HTMLDivElement>(null);
   const panelRef = useRef<HTMLDivElement>(null);
@@ -175,7 +173,8 @@ function StreetPicker({ homerooms }: { homerooms: string[] }) {
   // null until the first load finishes.
   const [claims, setClaims] = useState<PublicClaim[] | null>(null);
   const [claimsError, setClaimsError] = useState(false);
-  const [who, setWho] = useState<Who>({ name: "", homeroom: "" });
+  // The student picked in the name picker. Kept across streets, so claiming several takes one pick.
+  const [me, setMe] = useState<StudentOption | null>(null);
 
   // Claims are fetched from the browser: the homepage is ISR, so they'd be up to a minute stale.
   useEffect(() => {
@@ -367,9 +366,8 @@ function StreetPicker({ homerooms }: { homerooms: string[] }) {
           <ClaimForm
             key={status.place.placeId}
             place={status.place}
-            homerooms={homerooms}
-            who={who}
-            setWho={setWho}
+            me={me}
+            setMe={setMe}
             onClaimed={addClaim}
           />
         )}
@@ -377,9 +375,8 @@ function StreetPicker({ homerooms }: { homerooms: string[] }) {
           <DeleteClaim
             key={selectedClaim.placeId}
             claim={selectedClaim}
-            homerooms={homerooms}
-            who={who}
-            setWho={setWho}
+            me={me}
+            setMe={setMe}
             onDeleted={() => removeClaim(selectedClaim)}
           />
         )}
@@ -479,59 +476,195 @@ const BTN_PRIMARY =
 const BTN_SECONDARY =
   "inline-flex min-h-12 items-center justify-center border-2 border-ink px-4 text-[15px] font-bold text-ink hover:bg-ink hover:text-paper";
 
-/** Full name and homeroom, each with a visible label. */
-function WhoFields({
-  homerooms,
-  who,
-  setWho,
+const NAME_HINT = "Start typing your first or last name, then pick yourself.";
+
+/**
+ * Pick yourself from the roster (ARIA combobox with a listbox). The server
+ * returns at most MAX_OPTIONS matches as "First L." + homeroom with a sealed
+ * ref; nothing else about the roster reaches the browser. Once picked, the
+ * field becomes a name tag with "Not you?" to pick again.
+ */
+function NamePicker({
+  label,
+  me,
+  setMe,
   invalid,
   errorId,
+  onPicked,
 }: {
-  homerooms: string[];
-  who: Who;
-  setWho: (w: Who) => void;
+  label: string;
+  me: StudentOption | null;
+  setMe: (s: StudentOption | null) => void;
   invalid: boolean;
   errorId: string;
+  onPicked?: () => void;
 }) {
   const id = useId();
-  const described = invalid ? errorId : undefined;
+  const listId = `${id}-list`;
+  const hintId = `${id}-hint`;
+  const refocus = useRef(false);
+  const [query, setQuery] = useState("");
+  const [results, setResults] = useState<{ q: string; options: StudentOption[] } | null>(null);
+  const [failedQuery, setFailedQuery] = useState<string | null>(null);
+  const [open, setOpen] = useState(false);
+  const [active, setActive] = useState(-1);
+
+  const q = query.trim();
+  const searchable = q.replace(/\s/g, "").length >= MIN_QUERY;
+
+  // Debounced search; a newer query aborts the older request.
+  useEffect(() => {
+    if (!searchable) return;
+    const ctrl = new AbortController();
+    const timer = setTimeout(() => {
+      fetch(`/api/claims/students?q=${encodeURIComponent(q)}`, { signal: ctrl.signal, cache: "no-store" })
+        .then((res) => (res.ok ? (res.json() as Promise<StudentOption[]>) : Promise.reject(new Error(String(res.status)))))
+        .then((options) => setResults({ q, options }))
+        .catch(() => {
+          if (!ctrl.signal.aborted) setFailedQuery(q);
+        });
+    }, 200);
+    return () => {
+      clearTimeout(timer);
+      ctrl.abort();
+    };
+  }, [q, searchable]);
+
+  const ready = searchable && results?.q === q;
+  const options = ready ? results.options : [];
+  const failed = searchable && !ready && failedQuery === q;
+  const expanded = open && options.length > 0;
+  const act = active < options.length ? active : -1;
+  const twins = new Set(options.map(optionLabel)).size < options.length;
+
+  const pick = (o: StudentOption) => {
+    setMe(o);
+    setQuery("");
+    setOpen(false);
+    setActive(-1);
+    onPicked?.();
+  };
+
+  if (me) {
+    return (
+      <div className="flex flex-col gap-1">
+        <span className={LABEL}>{label}</span>
+        <div className="flex items-center justify-between gap-3 border-2 border-ink bg-field py-2.5 pr-2 pl-3 shadow-[inset_0_-4px_0_var(--color-butter)]">
+          <p className="flex min-w-0 flex-wrap items-baseline gap-x-2">
+            <span className="font-display text-[28px] leading-none font-extrabold break-words uppercase">{me.name}</span>
+            <span className="text-[15px] font-semibold text-body">
+              <span className="sr-only">homeroom </span>
+              {me.homeroom}
+            </span>
+          </p>
+          <button
+            type="button"
+            className="min-h-11 flex-none px-2 text-[14px] font-semibold text-ink underline underline-offset-4 hover:text-tomato-dark"
+            onClick={() => {
+              refocus.current = true;
+              setMe(null);
+            }}
+          >
+            Not you?
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  let status = "";
+  if (failed) status = "Name search isn't available right now. Try again in a moment.";
+  else if (searchable && !ready) status = "Searching…";
+  else if (ready && options.length === 0) status = "No one by that name. Check the spelling, or ask at the desk.";
+  else if (twins || options.length === MAX_OPTIONS) status = "Keep typing your last name to narrow the list.";
+
   return (
-    <div className="grid gap-3 sm:grid-cols-[minmax(0,1fr)_8rem]">
-      <div className="flex min-w-0 flex-col gap-1">
-        <label htmlFor={`${id}-name`} className={LABEL}>
-          Full name
-        </label>
+    <div className="flex flex-col gap-1">
+      <label htmlFor={`${id}-input`} className={LABEL}>
+        {label}
+      </label>
+      <div>
         <input
-          id={`${id}-name`}
+          id={`${id}-input`}
+          ref={(el) => {
+            if (el && refocus.current) {
+              refocus.current = false;
+              el.focus();
+            }
+          }}
           className={FIELD}
-          autoComplete="name"
+          type="text"
+          role="combobox"
+          aria-autocomplete="list"
+          aria-expanded={expanded}
+          aria-controls={listId}
+          aria-activedescendant={expanded && act >= 0 ? `${id}-opt-${act}` : undefined}
+          aria-invalid={invalid || undefined}
+          aria-describedby={[hintId, invalid ? errorId : ""].filter(Boolean).join(" ")}
+          autoComplete="off"
+          spellCheck={false}
           maxLength={100}
-          value={who.name}
-          aria-invalid={invalid || undefined}
-          aria-describedby={described}
-          onChange={(e) => setWho({ ...who, name: e.target.value })}
+          value={query}
+          onChange={(e) => {
+            setQuery(e.target.value);
+            setOpen(true);
+            setActive(-1);
+          }}
+          onFocus={() => setOpen(true)}
+          onBlur={() => setOpen(false)}
+          onKeyDown={(e) => {
+            if (e.key === "ArrowDown" && options.length) {
+              e.preventDefault();
+              setOpen(true);
+              setActive(Math.min(act + 1, options.length - 1));
+            } else if (e.key === "ArrowUp" && options.length) {
+              e.preventDefault();
+              setActive(Math.max(act - 1, 0));
+            } else if (e.key === "Enter" && expanded && (act >= 0 || options.length === 1)) {
+              e.preventDefault();
+              pick(options[Math.max(act, 0)]);
+            } else if (e.key === "Escape" && expanded) {
+              e.preventDefault();
+              setOpen(false);
+            }
+          }}
         />
-      </div>
-      <div className="flex min-w-0 flex-col gap-1">
-        <label htmlFor={`${id}-hr`} className={LABEL}>
-          Homeroom
-        </label>
-        <select
-          id={`${id}-hr`}
-          className={FIELD}
-          value={who.homeroom}
-          aria-invalid={invalid || undefined}
-          aria-describedby={described}
-          onChange={(e) => setWho({ ...who, homeroom: e.target.value })}
+        <ul
+          id={listId}
+          role="listbox"
+          aria-label="Students"
+          hidden={!expanded}
+          // In the flow, not floating: it pushes the button down instead of covering it.
+          className="max-h-72 overflow-y-auto border-2 border-t-0 border-ink bg-paper"
         >
-          <option value="">Choose…</option>
-          {homerooms.map((room) => (
-            <option key={room} value={room}>
-              {room}
-            </option>
+          {options.map((o, i) => (
+            <li
+              key={o.ref}
+              id={`${id}-opt-${i}`}
+              role="option"
+              aria-selected={i === act}
+              // Keep focus in the input so blur doesn't close the list before the click lands.
+              onMouseDown={(e) => e.preventDefault()}
+              onClick={() => pick(o)}
+              className={`flex cursor-pointer items-baseline justify-between gap-3 px-3 py-2.5 ${
+                i === act ? "bg-butter" : "hover:bg-kraft"
+              }`}
+            >
+              <span className="min-w-0 font-semibold break-words">{o.name}</span>
+              <span className="flex-none text-[14px] text-body">
+                <span className="sr-only">homeroom </span>
+                {o.homeroom}
+              </span>
+            </li>
           ))}
-        </select>
+        </ul>
       </div>
+      <p id={hintId} className="text-[13px] text-body">
+        {NAME_HINT}
+      </p>
+      <p aria-live="polite" className={`text-[13.5px] ${failed ? "font-semibold text-error" : "text-body"} empty:hidden`}>
+        {status}
+      </p>
     </div>
   );
 }
@@ -567,29 +700,28 @@ function useBusy() {
 
 function ClaimForm({
   place,
-  homerooms,
-  who,
-  setWho,
+  me,
+  setMe,
   onClaimed,
 }: {
   place: Picked;
-  homerooms: string[];
-  who: Who;
-  setWho: (w: Who) => void;
+  me: StudentOption | null;
+  setMe: (s: StudentOption | null) => void;
   onClaimed: (claim: PublicClaim, mine: boolean) => void;
 }) {
   const errorId = useId();
+  const buttonRef = useRef<HTMLButtonElement>(null);
   const [error, setError] = useState<string | null>(null);
   const [busy, run] = useBusy();
 
   const submit = (e: FormEvent) => {
     e.preventDefault();
-    if (!who.name.trim() || !who.homeroom) return setError(MISSING_FIELDS);
+    if (!me) return setError(PICK_NAME);
     void run(async () => {
       setError(null);
       try {
-        const { status, data } = await send("POST", {
-          ...who,
+        const { status, data, pickAgain } = await send("POST", {
+          student: me.ref,
           placeId: place.placeId,
           address: `${place.street}, ${place.municipality}`,
           lat: place.lat,
@@ -598,7 +730,10 @@ function ClaimForm({
         // Success only once the server confirms the row.
         if (status === 200 && data?.claim) onClaimed(data.claim, true);
         else if (status === 409 && data?.claim) onClaimed(data.claim, false);
-        else setError(data?.error ?? "The claim couldn't be saved. Try again.");
+        else if (pickAgain) {
+          setMe(null);
+          setError(PICK_AGAIN_MESSAGE);
+        } else setError(data?.error ?? "The claim couldn't be saved. Try again.");
       } catch {
         setError(NETWORK_ERROR);
       }
@@ -607,9 +742,20 @@ function ClaimForm({
 
   return (
     <form onSubmit={submit} noValidate className="flex flex-col gap-3 border-t-2 border-rule pt-3">
-      <WhoFields homerooms={homerooms} who={who} setWho={setWho} invalid={!!error} errorId={errorId} />
+      <NamePicker
+        label="Your name"
+        me={me}
+        setMe={(s) => {
+          setMe(s);
+          setError(null);
+        }}
+        invalid={!!error}
+        errorId={errorId}
+        // After a pick, the next step is the claim button.
+        onPicked={() => setTimeout(() => buttonRef.current?.focus())}
+      />
       <FormError id={errorId} message={error} />
-      <button type="submit" aria-disabled={busy || undefined} className={BTN_PRIMARY}>
+      <button ref={buttonRef} type="submit" aria-disabled={busy || undefined} className={BTN_PRIMARY}>
         {busy ? "Claiming…" : "Claim this street"}
       </button>
     </form>
@@ -618,18 +764,17 @@ function ClaimForm({
 
 function DeleteClaim({
   claim,
-  homerooms,
-  who,
-  setWho,
+  me,
+  setMe,
   onDeleted,
 }: {
   claim: PublicClaim;
-  homerooms: string[];
-  who: Who;
-  setWho: (w: Who) => void;
+  me: StudentOption | null;
+  setMe: (s: StudentOption | null) => void;
   onDeleted: () => void;
 }) {
   const errorId = useId();
+  const deleteRef = useRef<HTMLButtonElement>(null);
   const [open, setOpen] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [busy, run] = useBusy();
@@ -644,13 +789,16 @@ function DeleteClaim({
 
   const submit = (e: FormEvent) => {
     e.preventDefault();
-    if (!who.name.trim() || !who.homeroom) return setError(MISSING_FIELDS);
+    if (!me) return setError(PICK_NAME);
     void run(async () => {
       setError(null);
       try {
-        const { status, data } = await send("DELETE", { ...who, placeId: claim.placeId });
+        const { status, data, pickAgain } = await send("DELETE", { student: me.ref, placeId: claim.placeId });
         if (status === 200) onDeleted();
-        else setError(data?.error ?? "The claim couldn't be deleted. Try again.");
+        else if (pickAgain) {
+          setMe(null);
+          setError(PICK_AGAIN_MESSAGE);
+        } else setError(data?.error ?? "The claim couldn't be deleted. Try again.");
       } catch {
         setError(NETWORK_ERROR);
       }
@@ -659,11 +807,21 @@ function DeleteClaim({
 
   return (
     <form onSubmit={submit} noValidate className="flex flex-col gap-3 border-t-2 border-rule pt-3">
-      <p className="text-[14px] text-body">Enter the name and homeroom this street was claimed with.</p>
-      <WhoFields homerooms={homerooms} who={who} setWho={setWho} invalid={!!error} errorId={errorId} />
+      <p className="text-[14px] text-body">Only {claim.claimer} can delete this claim.</p>
+      <NamePicker
+        label="Your name"
+        me={me}
+        setMe={(s) => {
+          setMe(s);
+          setError(null);
+        }}
+        invalid={!!error}
+        errorId={errorId}
+        onPicked={() => setTimeout(() => deleteRef.current?.focus())}
+      />
       <FormError id={errorId} message={error} />
       <div className="flex flex-wrap gap-3">
-        <button type="submit" aria-disabled={busy || undefined} className={BTN_PRIMARY}>
+        <button ref={deleteRef} type="submit" aria-disabled={busy || undefined} className={BTN_PRIMARY}>
           {busy ? "Deleting…" : "Delete"}
         </button>
         <button type="button" className={BTN_SECONDARY} onClick={() => setOpen(false)} disabled={busy}>
