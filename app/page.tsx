@@ -14,7 +14,7 @@ import { getHomepageData } from "@/lib/homepage.server";
 export const revalidate = 60;
 
 export default async function Home() {
-  const { goal, total, homerooms, topDonors } = await getHomepageData();
+  const { goal, total, homerooms, topDonors, gradeWars } = await getHomepageData();
   return (
     <>
       <a
@@ -28,7 +28,7 @@ export default async function Home() {
         <Hero goal={goal} total={total} />
         <Incentives />
         <Standings homerooms={homerooms} />
-        <GradeWars />
+        <GradeWars data={gradeWars} />
         <TopDonors donors={topDonors} />
         <HowToGive />
         <CollectionMap />

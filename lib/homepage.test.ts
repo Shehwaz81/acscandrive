@@ -52,6 +52,13 @@ describe("buildHomepageData", () => {
     expect(d.total).toBe(d.homerooms.reduce((s, h) => s + h.total, 0));
   });
 
+  it("adds Grade Wars from the same rows", () => {
+    // NOW is Wed Oct 7: the drive's first three weekdays.
+    const d = build([cans(1, 12), cash(2, 1_050)]);
+    expect(d.gradeWars.days.map((day) => day.date)).toEqual(["2026-10-05", "2026-10-06", "2026-10-07"]);
+    expect(d.gradeWars.results.at(-1)!.totals.map((t) => t.total)).toEqual([12, 0, 10, 0]);
+  });
+
   it("lists every homeroom with its mixed grades and size, even with no logs", () => {
     const d = build([]);
     expect(d.total).toBe(0);
@@ -84,7 +91,8 @@ describe("buildHomepageData", () => {
 
   it("sends no student ids or full last names", () => {
     const json = JSON.stringify(build([cans(1, 5), cans(2, 6)]));
-    expect(json).not.toMatch(/Quill|Stone|student_id|"id"/);
+    // Grade Wars days have an "id", but it is a calendar date.
+    expect(json).not.toMatch(/Quill|Stone|student_id|"id":(?!"\d{4}-\d{2}-\d{2}")/);
   });
 });
 

@@ -4,6 +4,7 @@
  */
 
 import { fmt, ordinalSuffix } from "../homepage";
+import { DRIVE } from "../site";
 import { longDate } from "./format";
 import { rankDay, type RankedGrade } from "./rank";
 import type { GradeDayResult } from "./types";
@@ -11,10 +12,11 @@ import type { GradeWarsStatus } from "./use-grade-wars";
 
 export type Board =
   | { kind: "ranked"; live: boolean; ranked: RankedGrade[]; dayTotal: number }
-  | { kind: "empty" | "loading" | "error" };
+  | { kind: "empty" | "loading" | "error" | "upcoming" };
 
 export function boardFor(status: GradeWarsStatus, result: GradeDayResult | null): Board {
-  if (status !== "ready" || !result) return { kind: status === "error" ? "error" : "loading" };
+  if (status === "error" || status === "upcoming") return { kind: status };
+  if (status !== "ready" || !result) return { kind: "loading" };
   const { ranked, dayTotal, isEmpty } = rankDay(result.totals);
   if (isEmpty) return { kind: "empty" };
   return { kind: "ranked", live: result.day.status === "in_progress", ranked, dayTotal };
@@ -31,6 +33,8 @@ export function statusText(board: Board): { chip: string; card: string | null } 
       return { chip: "Loading…", card: "Loading daily totals…" };
     case "error":
       return { chip: "Unavailable", card: "Daily totals unavailable" };
+    case "upcoming":
+      return { chip: "Not started", card: `Grade Wars starts ${longDate(DRIVE.startDate)}` };
   }
 }
 

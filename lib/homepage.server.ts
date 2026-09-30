@@ -16,8 +16,8 @@ const PAGE = 1000;
  * Reads private rows with the admin client, which bypasses RLS. That is safe
  * here only because nothing private leaves: the result is passed to client
  * components, so it ends up in the browser, and it holds aggregates plus
- * "First L." names for today's top donors, plus each homeroom's teacher
- * surname (owner's decision). No student IDs.
+ * "First L." names for today's top donors, each homeroom's teacher surname
+ * (owner's decision) and per-grade daily totals for Grade Wars. No student IDs.
  */
 export async function getHomepageData(): Promise<HomepageData> {
   const [students, logs, teachers] = await Promise.all([loadRoster(), loadLogs(), loadTeachers()]);

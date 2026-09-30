@@ -1,9 +1,10 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { longDate, shortDate } from "@/lib/grade-wars/format";
-import { GRADE_WARS_IS_DEMO } from "@/lib/grade-wars/index";
+import { PrecomputedGradeWarsRepository } from "@/lib/grade-wars/precomputed";
 import type { GradeWarsRepository } from "@/lib/grade-wars/repository";
+import type { GradeWarsData } from "@/lib/grade-wars/types";
 import { useGradeWars } from "@/lib/grade-wars/use-grade-wars";
 import { type Board, announcement, boardFor, statusText } from "@/lib/grade-wars/view";
 import { WRAP } from "@/lib/site";
@@ -17,18 +18,21 @@ const CHIP: Record<Board["kind"] | "live", string> = {
   empty: "bg-kraft text-ink",
   loading: "bg-kraft text-ink",
   error: "bg-tomato text-white",
+  upcoming: "bg-kraft text-ink",
 };
 
 /** Each collection day's ranking of Grades 9–12. Daily only; overall totals are The Standings. */
 export function GradeWars({
+  data,
   repository,
-  demo = GRADE_WARS_IS_DEMO,
 }: {
-  /** Tests inject their own. */
+  /** From `getHomepageData()`. */
+  data: GradeWarsData;
+  /** Tests inject their own instead. */
   repository?: GradeWarsRepository;
-  demo?: boolean;
-} = {}) {
-  const { days, selectedDayId, setSelectedDayId, result, status, retry } = useGradeWars(repository);
+}) {
+  const repo = useMemo(() => repository ?? new PrecomputedGradeWarsRepository(data), [repository, data]);
+  const { days, selectedDayId, setSelectedDayId, result, status, retry } = useGradeWars(repo);
   // Announce only after the visitor acts, not on page load.
   const [interacted, setInteracted] = useState(false);
 
@@ -49,7 +53,7 @@ export function GradeWars({
         <div className="grid gap-8 xl:grid-cols-[minmax(0,7fr)_minmax(0,5fr)] xl:items-end xl:gap-16">
           <div className="flex flex-col gap-3 lg:gap-4">
             <span className="font-mono text-[11px] font-semibold tracking-[.14em] text-muted lg:text-xs">
-              DAILY GRADE TABLE{demo && " · DEMO DATA"}
+              DAILY GRADE TABLE
             </span>
             <h2
               id="grade-wars-title"
@@ -95,7 +99,7 @@ export function GradeWars({
 
         <div className="grid gap-10 xl:grid-cols-[minmax(0,8fr)_minmax(0,4fr)] xl:items-end xl:gap-12">
           <div className="relative">
-            <Podium board={board} demo={demo} />
+            <Podium board={board} />
             {card && (
               <div
                 role={board.kind === "loading" ? "status" : undefined}

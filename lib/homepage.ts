@@ -4,6 +4,8 @@
  * components can import the helpers and tests can feed synthetic rows.
  */
 
+import { buildGradeWars } from "./grade-wars/build";
+import type { GradeWarsData } from "./grade-wars/types";
 import { canEquivalents, formatCents } from "./volunteer/money";
 import { isTodayToronto } from "./volunteer/time";
 import type { Student } from "./volunteer/types";
@@ -34,6 +36,8 @@ export type HomepageData = {
   homerooms: Homeroom[];
   /** Today's top donors, in rank order. */
   topDonors: Donor[];
+  /** Per-grade totals for the last five collection days. */
+  gradeWars: GradeWarsData;
 };
 
 /** The columns the aggregation needs from a `donation_logs` row. */
@@ -130,7 +134,13 @@ export function buildHomepageData(
     .slice(0, TOP_DONORS)
     .map((d) => ({ name: d.name, room: d.room, teacher: d.teacher, cans: d.cans }));
 
-  return { goal, total: homerooms.reduce((sum, h) => sum + h.total, 0), homerooms, topDonors };
+  return {
+    goal,
+    total: homerooms.reduce((sum, h) => sum + h.total, 0),
+    homerooms,
+    topDonors,
+    gradeWars: buildGradeWars(students, logs, now),
+  };
 }
 
 /** Owner's decision: first name + last initial, e.g. "Maya R.". */
