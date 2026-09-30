@@ -25,6 +25,8 @@ export interface VolunteerRepository {
   createLog(input: NewLog): Promise<DonationLog>;
   /** Direct overwrite of method and amount; no history is kept. */
   updateLog(id: string, patch: LogPatch): Promise<DonationLog>;
+  /** Real delete, no history. Deleting a log that is already gone succeeds, so a retry is safe. */
+  deleteLog(id: string): Promise<void>;
 }
 
 /**

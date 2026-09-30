@@ -228,6 +228,22 @@ export function useUpdateLog() {
   );
 }
 
+export function useDeleteLog() {
+  const { repo, bump, syncMockFlags } = useRepoContext();
+  return useCallback(
+    async (id: string) => {
+      try {
+        await repo.deleteLog(id);
+        sessionSaved.remove(id);
+        bump();
+      } finally {
+        syncMockFlags();
+      }
+    },
+    [repo, bump, syncMockFlags],
+  );
+}
+
 export function useSessionSaved() {
   return useSyncExternalStore(
     sessionSaved.subscribe,

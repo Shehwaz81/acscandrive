@@ -60,6 +60,26 @@ describe("MockVolunteerRepository", () => {
     expect(await repo.getTotals("s01")).toEqual({ cans: 24, cashCents: 2550, canEquivalents: 49 });
   });
 
+  it("deletes a log from the student's logs, recent logs and totals", async () => {
+    const repo = make();
+    const [latest] = await repo.listLogsForStudent("s01");
+    await repo.deleteLog(latest.id);
+    expect((await repo.listLogsForStudent("s01")).map((l) => l.id)).not.toContain(latest.id);
+    expect((await repo.listRecentLogs(100)).map((l) => l.id)).not.toContain(latest.id);
+    expect(await repo.getTotals("s01")).toEqual({ cans: 24, cashCents: 1000, canEquivalents: 34 });
+    // A retry after a lost response: already gone still succeeds.
+    await expect(repo.deleteLog(latest.id)).resolves.toBeUndefined();
+  });
+
+  it("keeps the log when a delete fails", async () => {
+    const repo = make();
+    const [latest] = await repo.listLogsForStudent("s01");
+    repo.setFailNextWrite(true);
+    await expect(repo.deleteLog(latest.id)).rejects.toThrow("The connection dropped.");
+    expect((await repo.listLogsForStudent("s01")).map((l) => l.id)).toContain(latest.id);
+    expect((await repo.getTotals("s01")).cans).toBe(36);
+  });
+
   it("lists recent logs newest first with their student", async () => {
     const repo = make();
     const recent = await repo.listRecentLogs(8);

@@ -36,7 +36,7 @@
 - Support keyboard use, clear focus, visible saving/error states, and quick repeated entry. Keep the entered values available after failures and show success only after the write is confirmed.
 - Distinguish students with identical names using homeroom/grade and internal ID. Never treat a name as a unique identifier.
 - Prevent duplicate credit from double clicks, retries, and lost responses. Disabling the submit button alone is insufficient; use a stable submission identifier and a database uniqueness guarantee. Reuse the identifier on retry and reject conflicting payloads.
-- Corrections are direct overwrites of a log (owner's decision): no correction reason, no history UI. Totals are always computed from logs, so edits adjust every total consistently. Never delete donation logs, and never store or edit a student's total.
+- Corrections are direct overwrites of a log (owner's decision): no correction reason, no history UI. Totals are always computed from logs, so edits adjust every total consistently. Deleting a log is a real `DELETE` of the row (owner's decision): no void flag, history or reason; totals re-sum on their own. Never store or edit a student's total.
 - Public pages should make school progress, homeroom standings, and approved incentives easy to understand. Design responsively with accessible labels, contrast, focus states, and readable errors. Use supplied branding when available.
 
 ## Data rules

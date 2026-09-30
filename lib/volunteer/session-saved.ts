@@ -51,6 +51,9 @@ export const sessionSaved = {
       write(read().map((e) => (e.log.id === log.id ? { ...e, log } : e)));
     }
   },
+  remove(id: string) {
+    if (read().some((e) => e.log.id === id)) write(read().filter((e) => e.log.id !== id));
+  },
   clear() {
     write([]);
   },

@@ -52,4 +52,10 @@ export class SupabaseVolunteerRepository implements VolunteerRepository {
   updateLog(id: string, patch: LogPatch) {
     return send<DonationLog>(`/api/volunteer/logs/${q(id)}`, { method: "PATCH", body: JSON.stringify(patch) });
   }
+
+  /** 204 has no body, so this skips `send`'s JSON parsing. */
+  async deleteLog(id: string) {
+    const res = await fetch(`/api/volunteer/logs/${q(id)}`, { method: "DELETE", cache: "no-store" });
+    if (!res.ok) throw new Error(`Request failed (${res.status})`);
+  }
 }
