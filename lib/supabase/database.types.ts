@@ -76,6 +76,44 @@ export type Database = {
           },
         ]
       }
+      street_claims: {
+        Row: {
+          address: string
+          created_at: string
+          id: string
+          lat: number
+          lng: number
+          place_id: string
+          student_id: number
+        }
+        Insert: {
+          address: string
+          created_at?: string
+          id?: string
+          lat: number
+          lng: number
+          place_id: string
+          student_id: number
+        }
+        Update: {
+          address?: string
+          created_at?: string
+          id?: string
+          lat?: number
+          lng?: number
+          place_id?: string
+          student_id?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "street_claims_student_id_fkey"
+            columns: ["student_id"]
+            isOneToOne: false
+            referencedRelation: "students"
+            referencedColumns: ["student_id"]
+          },
+        ]
+      }
       students: {
         Row: {
           first_name: string

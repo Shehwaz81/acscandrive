@@ -14,6 +14,10 @@ export const revalidate = 60;
 
 export default async function Home() {
   const { goal, total, homerooms, topDonors } = await getHomepageData();
+  // For the claim form's homeroom picker; the codes are already public on the standings.
+  const homeroomCodes = homerooms
+    .map((h) => h.room)
+    .sort((a, b) => a.localeCompare(b, "en", { numeric: true, sensitivity: "base" }));
   return (
     <>
       <a
@@ -29,7 +33,7 @@ export default async function Home() {
         <Standings homerooms={homerooms} />
         <TopDonors donors={topDonors} />
         <HowToGive />
-        <CollectionMap />
+        <CollectionMap homerooms={homeroomCodes} />
       </main>
       <SiteFooter />
     </>
