@@ -1,5 +1,5 @@
 import "server-only";
-import { buildHomepageData, type HomepageData, type LogRow } from "./homepage";
+import { buildHomepageData, type HomepageData, type LogRow, type TeacherRow, teacherLabels } from "./homepage";
 import { DRIVE } from "./site";
 import { createAdminClient } from "./supabase/admin";
 import { loadRoster } from "./volunteer/roster.server";
@@ -16,11 +16,28 @@ const PAGE = 1000;
  * Reads private rows with the admin client, which bypasses RLS. That is safe
  * here only because nothing private leaves: the result is passed to client
  * components, so it ends up in the browser, and it holds aggregates plus
- * "First L." names for today's top donors. No student IDs.
+ * "First L." names for today's top donors, plus each homeroom's teacher
+ * surname (owner's decision). No student IDs.
  */
 export async function getHomepageData(): Promise<HomepageData> {
-  const [students, logs] = await Promise.all([loadRoster(), loadLogs()]);
-  return buildHomepageData(students, logs, DRIVE.goal);
+  const [students, logs, teachers] = await Promise.all([loadRoster(), loadLogs(), loadTeachers()]);
+  return buildHomepageData(students, logs, DRIVE.goal, new Date(), teacherLabels(teachers));
+}
+
+/** Room and teacher for every student, in pages; only the homepage reads hr_teacher. */
+async function loadTeachers(): Promise<TeacherRow[]> {
+  const db = createAdminClient();
+  const all: TeacherRow[] = [];
+  for (let from = 0; ; from += PAGE) {
+    const { data, error } = await db
+      .from("students")
+      .select("hr, hr_teacher")
+      .order("student_id")
+      .range(from, from + PAGE - 1);
+    if (error) throw new Error(`Couldn't read homeroom teachers: ${error.message}`);
+    all.push(...data);
+    if (data.length < PAGE) return all;
+  }
 }
 
 /**

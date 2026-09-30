@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { buildHomepageData, type LogRow, matchesQuery, ordinalSuffix, publicName } from "./homepage";
+import { buildHomepageData, type LogRow, matchesQuery, ordinalSuffix, publicName, teacherLabels } from "./homepage";
 import type { Student } from "./volunteer/types";
 
 // Synthetic roster: never real students in tests.
@@ -28,7 +28,14 @@ const cash = (student: number, cents: number, at = TODAY): LogRow => ({
   occurred_at: at,
 });
 
-const build = (logs: LogRow[], now = NOW) => buildHomepageData(students, logs, 20_000, now);
+// Synthetic teachers; room 12 has none, so it falls back to its code.
+const teachers = teacherLabels([
+  { hr: "204", hr_teacher: "Okafor" },
+  { hr: "204", hr_teacher: " Okafor " },
+  { hr: "P3", hr_teacher: "Lindqvist" },
+]);
+
+const build = (logs: LogRow[], now = NOW) => buildHomepageData(students, logs, 20_000, now, teachers);
 
 describe("buildHomepageData", () => {
   it("rounds partial dollars down per student, then sums", () => {
@@ -61,8 +68,8 @@ describe("buildHomepageData", () => {
   it("ranks today's donors only, by their can-equivalents", () => {
     const d = build([cans(1, 40, LAST_WEEK), cans(2, 3), cash(3, 500), cash(4, 60)]);
     expect(d.topDonors).toEqual([
-      { name: "Cy W.", room: "P3", cans: 5 },
-      { name: "Ben S.", room: "204", cans: 3 },
+      { name: "Cy W.", room: "P3", teacher: "Lindqvist", cans: 5 },
+      { name: "Ben S.", room: "204", teacher: "Okafor", cans: 3 },
     ]);
   });
 
@@ -81,16 +88,38 @@ describe("buildHomepageData", () => {
   });
 });
 
+describe("teacher labels", () => {
+  it("labels each homeroom with its teacher, falling back to the room code", () => {
+    const d = build([]);
+    expect(Object.fromEntries(d.homerooms.map((h) => [h.room, h.teacher]))).toEqual({
+      "12": "12",
+      "204": "Okafor",
+      P3: "Lindqvist",
+    });
+  });
+
+  it("lists every teacher of a shared room once, in order", () => {
+    const labels = teacherLabels([
+      { hr: "9A", hr_teacher: "Moreau" },
+      { hr: "9A", hr_teacher: "Adeyemi" },
+      { hr: "9A", hr_teacher: "Moreau" },
+      { hr: "9B", hr_teacher: "  " },
+    ]);
+    expect([...labels]).toEqual([["9A", "Adeyemi / Moreau"]]);
+  });
+});
+
 describe("helpers", () => {
   it("formats public names as first name + last initial", () => {
     expect(publicName({ firstName: " Maya ", lastName: "rossi" })).toBe("Maya R.");
   });
 
   it("matches grades inside mixed homerooms", () => {
-    const h = { room: "205", grades: [9, 10, 12], students: 20, total: 0, cans: 0, cashCents: 0 };
+    const h = { room: "205", teacher: "Okafor", grades: [9, 10, 12], students: 20, total: 0, cans: 0, cashCents: 0 };
     expect(matchesQuery(h, "grade 10")).toBe(true);
     expect(matchesQuery(h, "g11")).toBe(false);
     expect(matchesQuery(h, "20")).toBe(true);
+    expect(matchesQuery(h, "okaf")).toBe(true);
   });
 
   it("uses the right ordinal for teens and twenties", () => {
