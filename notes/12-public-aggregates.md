@@ -19,7 +19,9 @@ The homepage needs a school total, a total per homeroom, and today's top donors.
 database rows (private)  ──sum / group by──▶  a few numbers (public)  ──▶  browser
 ```
 
-In this app, one server-only function (`getHomepageData()`) is that boundary. Today it returns demo numbers. Later its body will query the database. Because every section gets its figures from that one function, there is one place to check what leaves.
+In this app, one server-only function (`getHomepageData()`) is that boundary. It reads the roster and every donation with the secret key, adds them up, and returns only the totals. Because every section gets its figures from that one function, there is one place to check what leaves. Adding a field to its result is a publishing decision, not a refactor.
+
+Where to add things up is a real choice. The database could do it (a SQL `GROUP BY` in a view or function), or the server can fetch rows and sum them in code. Here the server sums them, because the data is small (about 1,100 students and a few thousand donations), there is no schema change, and the rounding rule stays in one place in code. Summing in the database wins once the rows get too many to move around. The boundary is the same either way: private rows stay on the server side.
 
 ## Aggregates can still leak
 
@@ -29,12 +31,16 @@ A total is not automatically anonymous:
 - **Differences over time.** A total that jumps by 40 right after someone was seen at the desk tells you what they gave.
 - **Named lists are a disclosure by design.** "Top donors" publishes names and amounts on purpose, so it needs the organizer's decision on how names appear (for example, first name + initial) and whether students can opt out.
 
-For a school can drive, these risks are small and accepted. But they are real choices, not side effects.
+For a school can drive, these risks are small and accepted. But they are real choices, not side effects. In this app, the owner chose to show every homeroom, including 1-student ones, and to show top donors as first name + last initial.
 
 ## One source for every figure
 
 The hero's fill level, its number, "62% there" and "7,520 to go" are all computed from the same two values, goal and total. If each piece computed its own figures, they could disagree (for example, rounding up to "100%" while 10 cans are still missing). This is the same idea as note 11's derived totals: store or fetch the base facts once, and derive everything else from them.
 
+## Rounding once, at a defined level
+
+Converting money to "cans" loses the partial dollars, so *where* you round changes the answer. Two students giving $1.50 each is 1 + 1 = 2 if you round per student, but 3 if you add the $3.00 first. This app rounds **per student**, then adds whole numbers upward (homeroom, then school). That way every level agrees with the student totals volunteers see. The alternative gives slightly bigger totals that no longer add up.
+
 ## Static pages and fresh numbers
 
-A page built once at deploy time (a "static" page) is fast and cheap, but its numbers freeze at build time. Once totals come from the database, the page needs either a short re-generation window (for example, rebuild at most once a minute) or rendering on every request. For a school site, a minute of delay is a good trade for serving mostly cached pages.
+A page built once at deploy time (a "static" page) is fast and cheap, but its numbers freeze at build time. This homepage uses **incremental regeneration**: visitors get the cached page, and at most once a minute a visit triggers a background rebuild with fresh totals. A donation shows up within about a minute. If the database is down during a rebuild, the old page keeps being served instead of an error. That's the stale-while-revalidate pattern, the same idea as HTTP's `Cache-Control: stale-while-revalidate`.

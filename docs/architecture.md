@@ -2,7 +2,7 @@
 
 This is the running record of how the Can Drive site is built and why. Update it when a decision changes. Business rules and data constraints live in `CLAUDE.md`. This file covers the technical and design choices made to satisfy them.
 
-_Last updated: 2026-09-29. Current scope: public homepage frontend with demo data, and the volunteer workspace (`/volunteer`). The workspace searches the real `students` table; donation logs are still kept in browser memory. `/volunteer` and its API require an admin login (see [Volunteer login](#volunteer-login))._
+_Last updated: 2026-09-29. Current scope: the public homepage, which reads live totals from Supabase, and the volunteer workspace (`/volunteer`), which searches the real `students` table and saves to `donation_logs`. The collection map is still a schematic placeholder. `/volunteer` and its API require an admin login (see [Volunteer login](#volunteer-login))._
 
 ## Stack
 
@@ -27,7 +27,7 @@ The homepage is a port of the claude.ai/design file **Can Drive Homepage.dc.html
 ```
 app/
   layout.tsx          fonts, metadata, <html lang="en-CA">
-  page.tsx            homepage: calls getHomepageData() once, passes props to the sections (static)
+  page.tsx            homepage: calls getHomepageData() once, passes props to the sections (ISR, 60s)
   globals.css         design tokens, base styles, effect utilities
   docs/page.tsx       renders docs/architecture.md
 components/
@@ -36,8 +36,9 @@ components/
   marks.tsx           marker underline, rubber stamp, school crest (public/acslogo.png)
   home/               one file per homepage section
 lib/
-  homepage.server.ts  getHomepageData(): the only source of homepage figures (demo values for now)
-  demo-data.ts        the demo values + pure helpers (fmt, homeroomStats, matchesQuery)
+  homepage.server.ts  getHomepageData(): reads Supabase, the only source of homepage figures
+  homepage.ts         types, buildHomepageData() (pure aggregation), display helpers
+  demo-data.ts        the collection map's schematic zone grid (still demo)
   site.ts             nav links, content-width class, fixed drive details (DRIVE)
 docs/
   architecture.md     this file
@@ -53,7 +54,7 @@ Only three components ship JavaScript. Everything else renders to static HTML.
 | `home/standings.tsx` | Search, selection and the full-list toggle. |
 | `home/zone-map.tsx` | Zone selection. |
 
-The homepage prerenders as a static route (`○` in `next build`).
+The homepage prerenders as a static route (`○` in `next build`) and revalidates at most once a minute (see Data boundary).
 
 ## Responsive strategy: one tree, not two artboards
 
@@ -133,7 +134,7 @@ supabase/drafts/volunteer_workspace.sql   schema additions, not applied
 
 **Log flow state** is one reducer (`idle | saving | failed | saved`). While saving, every other action is ignored, and a ref guards against two saves starting in one render. A failure keeps every value and focuses "Try saving again"; success only shows once the write resolves.
 
-**Privacy.** Seed data is fictional. Student names only exist in `/volunteer` bundles (checked: the homepage's chunks contain none). The layout sets `robots: noindex, nofollow`. The guard (`lib/volunteer/guard.ts`) requires an admin login for both data sources; see [Volunteer login](#volunteer-login).
+**Privacy.** Seed data is fictional. Full student names only exist in `/volunteer` responses. The homepage shows only today's top donors as "First L." (see Data boundary). The layout sets `robots: noindex, nofollow`. The guard (`lib/volunteer/guard.ts`) requires an admin login for both data sources; see [Volunteer login](#volunteer-login).
 
 **Times** display in `America/Toronto`; "Today" means the Toronto calendar day.
 
@@ -208,7 +209,7 @@ browser (SupabaseVolunteerRepository, fetch)
 | --- | --- | --- | --- |
 | `lib/supabase/server.ts` | Publishable + session cookie | Applies | Server components, server actions, route handlers |
 | `lib/supabase/client.ts` | Publishable | Applies | Client components (nothing needs it yet) |
-| `lib/supabase/admin.ts` | Secret, `server-only` | Bypassed | Server code that has already checked authorization |
+| `lib/supabase/admin.ts` | Secret, `server-only` | Bypassed | Server code that has already checked authorization, and `getHomepageData()`, which returns only public aggregates |
 | `proxy.ts` → `lib/supabase/proxy.ts` | Publishable | n/a | Refreshes the auth cookie with `getClaims()` on each request |
 
 - **Why not `@supabase/server`:** it's a public-beta package built for header-based backends such as Edge Functions. In Next.js it still needs `@supabase/ssr` for cookies, plus hand-rolled JWKS caching. The supabase-js `auth.getClaims()` call already verifies JWTs.
@@ -217,23 +218,29 @@ browser (SupabaseVolunteerRepository, fetch)
 
 ## Data boundary
 
-Every figure on the homepage comes from **`getHomepageData()`** in `lib/homepage.server.ts`. `app/page.tsx` calls it once and passes plain props down; no section imports data itself. It is `server-only`, and today it returns the demo constants from `lib/demo-data.ts` (goal, school total, 16 homerooms, fictional top donors). The zone grid is still read straight from `demo-data.ts` by the collection map, which is undecided.
+The homepage reads **live data** from Supabase. Every figure comes from **`getHomepageData()`** in `lib/homepage.server.ts`. `app/page.tsx` calls it once and passes plain props down; no section imports data itself.
 
-Fixed copy that isn't data (drive dates, desk location and hours, organizer contact) lives in `DRIVE` in `lib/site.ts`.
+```
+students + donation_logs  --admin client (server only)-->  getHomepageData()
+   (private rows)                                             |  buildHomepageData(): sums, groups, top 8 today
+                                                              v
+                                   { goal, total, homerooms[], topDonors[] }  -->  page (static, rebuilt at most once a minute)
+```
 
-`lib/demo-data.ts` also holds pure helpers used by the client standings:
+- **How:** `loadRoster()` (paged, reused from the volunteer desk) plus a keyset-paged read of `donation_logs` (`cans` and `cash` only; `online` stays out until refunds are defined). The aggregation is a pure function, `buildHomepageData()` in `lib/homepage.ts`, unit-tested on synthetic students in `lib/homepage.test.ts`.
+- **Why in TypeScript, not SQL:** it needs no migration and reuses the one rounding rule (`canEquivalents()`) instead of copying it into SQL. Reading about 1,100 students plus a few thousand logs at most once a minute is cheap. If volume ever grows, the upgrade is one SQL function that returns the same JSON, called from the same place.
+- **Rounding rule:** each student's total is `canEquivalents(cans, cents)` (partial dollars round down, per student). A homeroom's total is the sum of its students' totals, and the school total is the sum of the homerooms. Every level matches the volunteer dashboard.
+- **Homerooms** are the roster's `hr` values, all 58 of them, including tiny or non-class codes like `Office` or 1-student rooms (the owner's decision; a 1-student room's total reveals that student's amount). Many mix grades, so each has `grades: number[]` ("Grades 10, 11, 12"), and "grade 9" in the search matches any homeroom with a grade 9 student. They're sorted by total, then by room code.
+- **Top donors:** students with the highest can-equivalents **today** (America/Toronto day of `occurred_at`), top 8, shown as **first name + last initial** (owner's decision). Ties are ordered by name for display only; the lunch-voucher tie rule is unconfirmed.
+- **What is public:** the result is serialised into the page, because `Standings` is a client component. It contains only aggregates and today's top donors ("First L.", homeroom, total): no student IDs, full surnames, teachers or individual logs. Checked: the rendered page contains no `student_id` or `hr_teacher`, and no roster surname other than ordinary words already in the page copy.
+- **Freshness:** `export const revalidate = 60` (ISR). The page is served from cache and rebuilt in the background at most once a minute, so a saved donation shows up within about a minute. If a rebuild fails (for example, Supabase is down), the last good page keeps being served. `next build` also queries Supabase, so the env vars must be set wherever the site is built.
+- **Why the admin client is acceptable here:** it bypasses RLS and this page has no login. That's safe only because the function returns public aggregates. Adding a field to its result is a publishing decision.
 
-- `homeroomStats` computes the dodgeball target, percentage, split and status.
-- `matchesQuery` implements the standings search rule: `grade 9` or `g9` matches a grade, a bare number matches a grade, and anything else matches part of the homeroom code.
+Fixed copy that isn't data lives in `DRIVE` in `lib/site.ts`: the goal (20,000 can-equivalents), drive dates, desk location and hours, and organizer contact. `lib/demo-data.ts` now holds only the collection map's schematic zone grid, which is still undecided.
 
-To connect the database, change only the body of `getHomepageData()`:
+Display helpers used by the client standings are in `lib/homepage.ts`: `homeroomStats` (provisional dodgeball target, percentage, real cans/cash split, status), `matchesQuery` and `gradeLabel`. Move the reward maths into the single incentive-calculation module that `CLAUDE.md` requires once the rules are confirmed.
 
-1. Return **aggregates only**: school total, homeroom totals with student counts, and today's (America/Toronto) top donors as display name, homeroom and total. Compute them from `donation_logs` with `canEquivalents()` (sum the cans and the cents, then convert once), never from a stored total. A view or RPC that exposes only these fields keeps the rule in the database too.
-2. Whatever the function returns is serialised into the page and reaches the browser, because `Standings` is a client component. **No student IDs or private rows.**
-3. The page is static today. Once the data is live, give the route a revalidation window (or make it dynamic) so totals don't freeze at build time.
-3. Move the reward maths (targets, can-equivalents, top-3 ties) into the single incentive-calculation module that `CLAUDE.md` requires. Do that only once the rules are confirmed.
-
-**$1 = 1 can is confirmed.** The hero labels its total “can-equivalents (cans + cash)”. The podium and runners-up say “cans” for the same can-equivalent figures, by the owner's choice, because it reads more cleanly. The cash split (`~27%`) is a demo placeholder. The reward rules are still unconfirmed, which is why the incentives are stamped “Preview rules — awaiting confirmation”.
+**$1 = 1 can is confirmed.** The hero labels its total "can-equivalents (cans + cash)". The podium and runners-up say "cans" for the same can-equivalent figures, by the owner's choice, because it reads more cleanly. The reward rules are still unconfirmed, which is why the incentives are stamped "Preview rules — awaiting confirmation".
 
 ### Hero meter
 
@@ -271,6 +278,4 @@ Both meters derive the fill, the count and the notes from `(goal, total)` in one
 | Log search/indexes and `updated_at` | Build | Logs are in `donation_logs`. `supabase/drafts/volunteer_workspace.sql` (indexes, `updated_at`, Postgres name search) is optional until volume or audit needs call for it. |
 | “Choose a collection area” flow | Owner + build | The link is `#`. The area model and booking rule are undecided, and the grid is a schematic placeholder. |
 | Incentive rules | Organizers | Dates, cutoffs, ties, dodgeball qualification order, and cash treatment. |
-| Public donor names | Owner | The page shows “First L.” names (fictional). How real names appear publicly is a privacy decision. |
-| Desk location, hours, organizer contact | Organizers | Shown as “TBC” boxes. |
 | Baseline migration history | Owner | `supabase/migrations/20260927000000_baseline_schema.sql` is already applied on the remote project but isn't recorded there. Run `pnpm exec supabase login`, then `link --project-ref gcrfsdmkcfywkofhijsi`, then `migration repair --status applied 20260927000000`. |
