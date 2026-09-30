@@ -6,8 +6,10 @@ import { SiteHeader } from "@/components/home/site-header";
 import { Standings } from "@/components/home/standings";
 import { TopDonors } from "@/components/home/top-donors";
 import { ZoneMap } from "@/components/home/zone-map";
+import { getHomepageData } from "@/lib/homepage.server";
 
-export default function Home() {
+export default async function Home() {
+  const { goal, total, homerooms, topDonors } = await getHomepageData();
   return (
     <>
       <a
@@ -18,10 +20,10 @@ export default function Home() {
       </a>
       <SiteHeader />
       <main id="main" tabIndex={-1} className="overflow-x-clip outline-none">
-        <Hero />
+        <Hero goal={goal} total={total} />
         <Incentives />
-        <Standings />
-        <TopDonors />
+        <Standings homerooms={homerooms} />
+        <TopDonors donors={topDonors} />
         <HowToGive />
         <ZoneMap />
       </main>

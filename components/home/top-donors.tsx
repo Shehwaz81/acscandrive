@@ -1,47 +1,48 @@
 import { Can } from "@/components/can";
 import { MarkerUnderline } from "@/components/marks";
-import { TOP_DONORS, type Donor } from "@/lib/demo-data";
+import type { Donor } from "@/lib/demo-data";
 import { WRAP } from "@/lib/site";
 
-// Podium order left→right is 2nd, 1st, 3rd. Sizes are [mobile, desktop].
+// Podium order left→right is 2nd, 1st, 3rd. Sizes are [phone, md and up].
+// Totals are can-equivalents ($1 = 1 can) but labelled "cans" on purpose: it reads cleaner.
 const PODIUM = [
   {
     place: 2,
     suffix: "ND",
     body: "bg-paper",
-    size: "h-[160px] w-[min(104px,26vw)] lg:h-[230px] lg:w-[168px]",
-    num: "text-[46px] lg:text-[68px]",
-    sfx: "text-[15px] lg:text-[22px]",
-    numPos: "top-3.5 lg:top-[22px]",
-    bandPos: "bottom-3 lg:bottom-[18px]",
+    size: "h-[160px] w-[min(104px,26vw)] md:h-[230px] md:w-[168px]",
+    num: "text-[46px] md:text-[68px]",
+    sfx: "text-[15px] md:text-[22px]",
+    numPos: "top-3.5 md:top-[22px]",
+    bandPos: "bottom-3 md:bottom-[18px]",
     tilt: "-rotate-4",
   },
   {
     place: 1,
     suffix: "ST",
     body: "bg-butter",
-    size: "h-[204px] w-[min(112px,28vw)] lg:h-[300px] lg:w-[184px]",
-    num: "text-[64px] lg:text-[96px]",
-    sfx: "text-[19px] lg:text-[28px]",
-    numPos: "top-[18px] lg:top-[26px]",
-    bandPos: "bottom-3.5 lg:bottom-[22px]",
+    size: "h-[204px] w-[min(112px,28vw)] md:h-[300px] md:w-[184px]",
+    num: "text-[64px] md:text-[96px]",
+    sfx: "text-[19px] md:text-[28px]",
+    numPos: "top-[18px] md:top-[26px]",
+    bandPos: "bottom-3.5 md:bottom-[22px]",
     tilt: "rotate-3",
   },
   {
     place: 3,
     suffix: "RD",
     body: "bg-tomato",
-    size: "h-[138px] w-[min(100px,25vw)] lg:h-[196px] lg:w-[160px]",
-    num: "text-[38px] lg:text-[56px] text-white",
-    sfx: "text-[14px] lg:text-[20px] text-white",
-    numPos: "top-2.5 lg:top-3.5",
-    bandPos: "bottom-2.5 lg:bottom-3.5",
+    size: "h-[138px] w-[min(100px,25vw)] md:h-[196px] md:w-[160px]",
+    num: "text-[38px] md:text-[56px] text-white",
+    sfx: "text-[14px] md:text-[20px] text-white",
+    numPos: "top-2.5 md:top-3.5",
+    bandPos: "bottom-2.5 md:bottom-3.5",
     tilt: "-rotate-2",
   },
 ];
 
-export function TopDonors() {
-  const runnersUp = TOP_DONORS.slice(3);
+export function TopDonors({ donors }: { donors: Donor[] }) {
+  const runnersUp = donors.slice(3);
   // Two columns only from xl: the desktop podium is ~620px wide.
   return (
     <section
@@ -67,7 +68,7 @@ export function TopDonors() {
           </p>
         </div>
 
-        <Podium />
+        <Podium donors={donors} />
 
         <div className="flex flex-col gap-[18px] lg:gap-[22px]">
           <ol className="flex flex-col border-t-2 border-ink">
@@ -77,9 +78,9 @@ export function TopDonors() {
           </ol>
           <a
             href="#standings"
-            className="flex h-[52px] items-center justify-center gap-3 border-2 border-ink px-5 text-[15px] font-bold no-underline hover:bg-ink hover:text-paper lg:h-auto lg:self-start lg:py-3"
+            className="flex h-[52px] items-center justify-center gap-3 border-2 border-ink px-5 text-[15px] font-bold no-underline hover:bg-ink hover:text-paper md:self-start lg:h-auto lg:py-3"
           >
-            View full standings <span aria-hidden className="hidden lg:inline">→</span>
+            See homeroom standings <span aria-hidden>→</span>
           </a>
           <span className="font-mono text-[11px] leading-normal font-semibold text-muted lg:text-xs">
             Fictional names, demo totals in cans. How names appear on the real board is TBC.
@@ -90,24 +91,24 @@ export function TopDonors() {
   );
 }
 
-function Podium() {
+function Podium({ donors }: { donors: Donor[] }) {
   return (
-    <div className="relative flex flex-col pt-[34px] lg:items-center lg:py-4 xl:col-start-2 xl:row-span-2 xl:row-start-1 xl:py-0">
-      <span className="absolute top-0 right-0 rotate-5 font-marker text-lg leading-none text-tomato lg:-top-1.5 lg:right-6 lg:rotate-6 lg:text-[26px] lg:leading-[1.1]">
+    <div className="relative flex flex-col pt-[34px] md:items-center md:py-4 xl:col-start-2 xl:row-span-2 xl:row-start-1 xl:py-0">
+      <span className="absolute top-0 right-0 rotate-5 font-marker text-lg leading-none text-tomato md:-top-1.5 md:right-6 md:rotate-6 md:text-[26px] md:leading-[1.1]">
         top 3 win lunch!
       </span>
-      <ol className="flex items-end justify-center gap-2 min-[390px]:gap-3 lg:gap-8 lg:px-6">
+      <ol className="flex items-end justify-center gap-2 min-[390px]:gap-3 md:gap-8 md:px-6">
         {PODIUM.map((p) => {
-          const d = TOP_DONORS[p.place - 1];
+          const d = donors[p.place - 1];
           return (
             <li key={p.place} className="flex flex-col items-center gap-3.5">
               <span
-                className={`hidden bg-ink px-3.5 py-1.5 font-mono text-[11px] font-bold tracking-[.12em] text-butter ticket-mask [--notch:5px] lg:block ${p.tilt}`}
+                className={`hidden bg-ink px-3.5 py-1.5 font-mono text-[11px] font-bold tracking-[.12em] text-butter ticket-mask [--notch:5px] md:block ${p.tilt}`}
               >
                 LUNCH VOUCHER
               </span>
               <Can variant="podium" ribs className={p.size} bodyClassName={p.body}>
-                <div className={`absolute inset-x-0 flex items-baseline justify-center gap-px lg:gap-0.5 ${p.numPos}`}>
+                <div className={`absolute inset-x-0 flex items-baseline justify-center gap-px md:gap-0.5 ${p.numPos}`}>
                   <span className={`font-display leading-[.9] font-black ${p.num}`}>{p.place}</span>
                   <span className={`font-display font-extrabold ${p.sfx}`}>
                     <span className="sr-only">{p.suffix.toLowerCase()} place: </span>
@@ -115,20 +116,28 @@ function Podium() {
                   </span>
                 </div>
                 <div
-                  className={`absolute inset-x-0 flex flex-col gap-px border-y-2 border-ink bg-paper px-1 py-1.5 text-center lg:gap-0.5 lg:border-y-[3px] lg:px-2.5 lg:py-2 ${p.bandPos}`}
+                  className={`absolute inset-x-0 flex flex-col gap-px border-y-2 border-ink bg-paper px-1 py-1.5 text-center md:gap-0.5 md:border-y-[3px] md:px-2.5 md:py-2 ${p.bandPos}`}
                 >
-                  <span className="font-display text-[17px] leading-none font-extrabold lg:text-2xl">{d.name}</span>
-                  <span className="text-[11px] lg:text-[13px]">
-                    {d.room} · <b>{d.cans}<span className="hidden lg:inline"> cans</span></b>
-                  </span>
+                  {d ? (
+                    <>
+                      <span className="font-display text-[17px] leading-none font-extrabold md:text-2xl">{d.name}</span>
+                      <span className="text-[11px] md:text-[13px]">
+                        {d.room} · <b>{d.cans}<span className="hidden md:inline"> cans</span></b>
+                      </span>
+                    </>
+                  ) : (
+                    <span className="font-display text-[17px] leading-none font-extrabold text-muted md:text-2xl">
+                      Open
+                    </span>
+                  )}
                 </div>
               </Can>
             </li>
           );
         })}
       </ol>
-      <div className="h-1.5 self-stretch bg-ink lg:-mt-0.5 lg:h-2" />
-      <span className="flex justify-between self-stretch pt-2 font-mono text-[10.5px] font-semibold tracking-[.1em] text-muted lg:pt-2.5 lg:text-[11.5px] lg:tracking-[.12em]">
+      <div className="h-1.5 self-stretch bg-ink md:-mt-0.5 md:h-2" />
+      <span className="flex justify-between self-stretch pt-2 font-mono text-[10.5px] font-semibold tracking-[.1em] text-muted md:pt-2.5 md:text-[11.5px] md:tracking-[.12em]">
         <span>TODAY’S PODIUM · CANS</span>
         <span>RESETS DAILY</span>
       </span>

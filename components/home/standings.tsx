@@ -3,7 +3,6 @@
 import { useState } from "react";
 import { Can } from "@/components/can";
 import {
-  HOMEROOMS,
   type Homeroom,
   fmt,
   homeroomStats,
@@ -13,16 +12,17 @@ import {
 import { WRAP } from "@/lib/site";
 
 const TOP_N = 8;
-const LEADER_TOTAL = HOMEROOMS[0].total;
 const QUALIFY_NOTE =
   "Hitting the target doesn’t lock in a spot yet — qualification rules are still being confirmed.";
 
-export function Standings() {
+export function Standings({ homerooms }: { homerooms: Homeroom[] }) {
   const [query, setQuery] = useState("");
-  const [selected, setSelected] = useState<string | null>("10C");
+  // Start on the leader so the desktop card matches a visible row.
+  const [selected, setSelected] = useState<string | null>(homerooms[0]?.room ?? null);
   const [showAll, setShowAll] = useState(false);
 
-  const ranked = HOMEROOMS.map((h, i) => ({ ...h, rank: i + 1 }));
+  const ranked = homerooms.map((h, i) => ({ ...h, rank: i + 1 }));
+  const leaderTotal = Math.max(1, homerooms[0]?.total ?? 0);
   const rows = query
     ? ranked.filter((h) => matchesQuery(h, query))
     : showAll
@@ -87,7 +87,12 @@ export function Standings() {
             <ul className="border-t-2 border-paper xl:border-t-0">
               {rows.map((h) => (
                 <li key={h.room} className="border-b border-paper/20">
-                  <Row h={h} selected={h.room === selected} onClick={() => onRowClick(h.room)} />
+                  <Row
+                    h={h}
+                    leaderTotal={leaderTotal}
+                    selected={h.room === selected}
+                    onClick={() => onRowClick(h.room)}
+                  />
                   {h.room === selected && <InlineDetail h={h} />}
                 </li>
               ))}
@@ -117,7 +122,7 @@ export function Standings() {
             </div>
           </div>
 
-          <DetailCard h={detail} />
+          {detail && <DetailCard h={detail} />}
         </div>
       </div>
     </section>
@@ -126,7 +131,17 @@ export function Standings() {
 
 type Ranked = Homeroom & { rank: number };
 
-function Row({ h, selected, onClick }: { h: Ranked; selected: boolean; onClick: () => void }) {
+function Row({
+  h,
+  leaderTotal,
+  selected,
+  onClick,
+}: {
+  h: Ranked;
+  leaderTotal: number;
+  selected: boolean;
+  onClick: () => void;
+}) {
   const leader = h.rank === 1;
   const fg = selected ? "text-ink" : leader ? "text-butter" : "text-paper";
   const bar = selected ? "bg-ink" : leader ? "bg-butter" : "bg-paper";
@@ -147,14 +162,21 @@ function Row({ h, selected, onClick }: { h: Ranked; selected: boolean; onClick: 
       <span className="flex flex-col gap-0.5 xl:flex-row xl:items-center xl:gap-3">
         <span className="font-display text-2xl leading-none font-extrabold xl:text-[28px]">{h.room}</span>
         <span className="text-[12.5px] xl:text-[13px] xl:font-semibold">
-          <span className="xl:hidden">Grade {h.grade} </span>
-          {leader && "· Leader"}
+          <span className="xl:hidden">
+            Grade {h.grade}
+            {leader && " · "}
+          </span>
+          {leader && (
+            <span className="xl:border xl:border-current xl:px-1.5 xl:py-0.5 xl:font-mono xl:text-[11px] xl:tracking-[.1em] xl:uppercase">
+              Leader
+            </span>
+          )}
         </span>
       </span>
       <span className="hidden text-base xl:block">Grade {h.grade}</span>
       <span className="flex flex-col items-end xl:flex-row xl:items-center xl:justify-end xl:gap-3.5">
         <span className="hidden h-2 w-[110px] bg-[rgb(127_127_127/.3)] xl:block">
-          <span className={`block h-full ${bar}`} style={{ width: `${Math.round((h.total / LEADER_TOTAL) * 100)}%` }} />
+          <span className={`block h-full ${bar}`} style={{ width: `${Math.round((h.total / leaderTotal) * 100)}%` }} />
         </span>
         <span className="font-display text-2xl leading-none font-extrabold xl:min-w-16 xl:text-right xl:text-[26px]">
           {fmt(h.total)}

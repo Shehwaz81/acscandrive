@@ -11,8 +11,8 @@ const VARIANTS = {
     fill: "border-t-[3px]",
   },
   podium: {
-    body: "inset-y-[9px] border-[3px] rounded-[10px] lg:inset-y-3 lg:border-4 lg:rounded-[14px]",
-    lid: "h-[18px] -inset-x-1 border-[3px] rounded-lg bg-kraft lg:h-6 lg:-inset-x-1.5 lg:border-4 lg:rounded-[11px] lg:can-lid",
+    body: "inset-y-[9px] border-[3px] rounded-[10px] md:inset-y-3 md:border-4 md:rounded-[14px]",
+    lid: "h-[18px] -inset-x-1 border-[3px] rounded-lg bg-kraft md:h-6 md:-inset-x-1.5 md:border-4 md:rounded-[11px] md:can-lid",
     fill: "border-t-2",
   },
   meter: {
