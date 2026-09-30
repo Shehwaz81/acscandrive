@@ -6,6 +6,7 @@ export const WRAP = "mx-auto w-full max-w-[1440px] px-5 lg:px-16";
 export const NAV_LINKS = [
   { href: "#incentives", label: "Incentives" },
   { href: "#standings", label: "Standings" },
+  { href: "#grade-wars", label: "Grade Wars" },
   { href: "#map", label: "Collection map" },
 ];
 

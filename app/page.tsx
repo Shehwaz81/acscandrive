@@ -1,3 +1,4 @@
+import { GradeWars } from "@/components/home/grade-wars/grade-wars";
 import { Hero } from "@/components/home/hero";
 import { HowToGive } from "@/components/home/how-to-give";
 import { Incentives } from "@/components/home/incentives";
@@ -31,6 +32,7 @@ export default async function Home() {
         <Hero goal={goal} total={total} />
         <Incentives />
         <Standings homerooms={homerooms} />
+        <GradeWars />
         <TopDonors donors={topDonors} />
         <HowToGive />
         <CollectionMap homerooms={homeroomCodes} />
