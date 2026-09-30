@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useLayoutEffect, useRef, useState } from "react";
 import { Can } from "@/components/can";
 import {
   type Homeroom,
@@ -81,7 +81,7 @@ export function Standings({ homerooms }: { homerooms: Homeroom[] }) {
               className="hidden grid-cols-[72px_minmax(0,1fr)_130px_190px] gap-4 border-b-2 border-paper px-5 pb-3 font-mono text-[11.5px] font-semibold tracking-[.1em] text-rule xl:grid"
             >
               <span>RANK</span>
-              <span>HOMEROOM</span>
+              <span>HOMEROOM TEACHER</span>
               <span>GRADES</span>
               <span className="text-right">CAN-EQUIVALENTS</span>
             </div>
@@ -189,6 +189,28 @@ function Row({
   );
 }
 
+/** The card's headline: 88px, shrunk only as far as needed to keep a long name on one line. */
+function FitName({ name }: { name: string }) {
+  const ref = useRef<HTMLSpanElement>(null);
+  useLayoutEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    const fit = () => {
+      el.style.fontSize = "";
+      const room = el.parentElement?.clientWidth ?? el.clientWidth;
+      if (el.scrollWidth > room) el.style.fontSize = `${Math.floor((88 * room) / el.scrollWidth)}px`;
+    };
+    fit();
+    window.addEventListener("resize", fit);
+    return () => window.removeEventListener("resize", fit);
+  }, [name]);
+  return (
+    <span ref={ref} className="w-fit font-display text-[88px] leading-[.8] font-black whitespace-nowrap">
+      {name}
+    </span>
+  );
+}
+
 function ProgressBar({ pct, className }: { pct: number; className: string }) {
   return (
     <div className={`border-2 border-ink bg-kraft ${className}`}>
@@ -230,14 +252,14 @@ function DetailCard({ h }: { h: Ranked }) {
       aria-live="polite"
       className="hidden rotate-1 flex-col gap-[22px] bg-paper p-8 text-ink xl:flex"
     >
-      <div className="flex items-start justify-between">
-        <div className="flex flex-col gap-1.5">
+      <div className="flex items-start justify-between gap-4">
+        <div className="flex min-w-0 flex-col gap-1.5">
           <span className="font-mono text-[11.5px] font-semibold tracking-[.12em] text-muted">
             SELECTED HOMEROOM
           </span>
-          <span className="font-display text-[88px] leading-[.8] font-black">{h.room}</span>
+          <FitName name={h.teacher} />
           <span className="text-[15px]">
-            {h.teacher} · {gradeLabel(h)} · Rank {h.rank} · {h.students} students
+            Homeroom {h.room} · {gradeLabel(h)} · Rank {h.rank} · {h.students} students
           </span>
         </div>
         <Can variant="meter" fill={s.pct} className="h-[118px] w-[84px]" bodyClassName="bg-transparent" />
