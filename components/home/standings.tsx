@@ -3,26 +3,27 @@
 import { useState } from "react";
 import { Can } from "@/components/can";
 import {
-  HOMEROOMS,
   type Homeroom,
   fmt,
+  gradeLabel,
   homeroomStats,
   matchesQuery,
   ordinalSuffix,
-} from "@/lib/demo-data";
+} from "@/lib/homepage";
 import { WRAP } from "@/lib/site";
 
 const TOP_N = 8;
-const LEADER_TOTAL = HOMEROOMS[0].total;
 const QUALIFY_NOTE =
-  "Hitting the target doesn’t lock in a spot yet — qualification rules are still being confirmed.";
+  "The first 20 homerooms to hit their target play.";
 
-export function Standings() {
+export function Standings({ homerooms }: { homerooms: Homeroom[] }) {
   const [query, setQuery] = useState("");
-  const [selected, setSelected] = useState<string | null>("10C");
+  // Start on the leader so the desktop card matches a visible row.
+  const [selected, setSelected] = useState<string | null>(homerooms[0]?.room ?? null);
   const [showAll, setShowAll] = useState(false);
 
-  const ranked = HOMEROOMS.map((h, i) => ({ ...h, rank: i + 1 }));
+  const ranked = homerooms.map((h, i) => ({ ...h, rank: i + 1 }));
+  const leaderTotal = Math.max(1, homerooms[0]?.total ?? 0);
   const rows = query
     ? ranked.filter((h) => matchesQuery(h, query))
     : showAll
@@ -33,7 +34,7 @@ export function Standings() {
 
   const countText = query
     ? `${rows.length} match${rows.length === 1 ? "" : "es"}.`
-    : `Showing ${rows.length} of ${ranked.length} demo homerooms.`;
+    : `Showing ${rows.length} of ${ranked.length} homerooms.`;
 
   function onRowClick(room: string) {
     // On mobile the row is an accordion, so a second tap collapses it.
@@ -52,7 +53,7 @@ export function Standings() {
         <div className="flex flex-col gap-[18px] xl:flex-row xl:items-end xl:justify-between xl:gap-10">
           <div className="flex flex-col gap-[18px] xl:gap-3.5">
             <span className="font-mono text-[11px] font-semibold tracking-[.14em] text-butter xl:text-xs">
-              HOMEROOM TABLE · DEMO TOTALS
+              HOMEROOM TABLE · CAN-EQUIVALENTS
             </span>
             <h2
               id="standings-title"
@@ -67,7 +68,7 @@ export function Standings() {
               type="search"
               value={query}
               onChange={(e) => setQuery(e.target.value)}
-              placeholder="Try 10C or grade 9"
+              placeholder="Try 204 or grade 9"
               className="h-[52px] w-full min-w-0 bg-paper px-3.5 text-[17px] text-ink shadow-[inset_0_-4px_0_var(--color-butter)] placeholder:text-muted focus-visible:shadow-[inset_0_-4px_0_var(--color-tomato),0_0_0_3px_var(--color-butter)] focus-visible:outline-none xl:px-4"
             />
           </label>
@@ -77,17 +78,22 @@ export function Standings() {
           <div className="flex flex-col">
             <div
               aria-hidden
-              className="hidden grid-cols-[96px_minmax(0,1fr)_110px_240px] gap-4 border-b-2 border-paper px-5 pb-3 font-mono text-[11.5px] font-semibold tracking-[.1em] text-rule xl:grid"
+              className="hidden grid-cols-[96px_minmax(0,1fr)_170px_220px] gap-4 border-b-2 border-paper px-5 pb-3 font-mono text-[11.5px] font-semibold tracking-[.1em] text-rule xl:grid"
             >
               <span>RANK</span>
               <span>HOMEROOM</span>
-              <span>GRADE</span>
+              <span>GRADES</span>
               <span className="text-right">CAN-EQUIVALENTS</span>
             </div>
             <ul className="border-t-2 border-paper xl:border-t-0">
               {rows.map((h) => (
                 <li key={h.room} className="border-b border-paper/20">
-                  <Row h={h} selected={h.room === selected} onClick={() => onRowClick(h.room)} />
+                  <Row
+                    h={h}
+                    leaderTotal={leaderTotal}
+                    selected={h.room === selected}
+                    onClick={() => onRowClick(h.room)}
+                  />
                   {h.room === selected && <InlineDetail h={h} />}
                 </li>
               ))}
@@ -117,7 +123,7 @@ export function Standings() {
             </div>
           </div>
 
-          <DetailCard h={detail} />
+          {detail && <DetailCard h={detail} />}
         </div>
       </div>
     </section>
@@ -126,8 +132,19 @@ export function Standings() {
 
 type Ranked = Homeroom & { rank: number };
 
-function Row({ h, selected, onClick }: { h: Ranked; selected: boolean; onClick: () => void }) {
-  const leader = h.rank === 1;
+function Row({
+  h,
+  leaderTotal,
+  selected,
+  onClick,
+}: {
+  h: Ranked;
+  leaderTotal: number;
+  selected: boolean;
+  onClick: () => void;
+}) {
+  // No leader until someone has donated.
+  const leader = h.rank === 1 && h.total > 0;
   const fg = selected ? "text-ink" : leader ? "text-butter" : "text-paper";
   const bar = selected ? "bg-ink" : leader ? "bg-butter" : "bg-paper";
   return (
@@ -135,8 +152,8 @@ function Row({ h, selected, onClick }: { h: Ranked; selected: boolean; onClick: 
       type="button"
       onClick={onClick}
       aria-pressed={selected}
-      aria-label={`${h.room}, grade ${h.grade}, rank ${h.rank}, ${fmt(h.total)} can-equivalents`}
-      className={`grid min-h-[60px] w-full grid-cols-[58px_minmax(0,1fr)_auto] items-center gap-3 px-3 py-2.5 text-left xl:min-h-16 xl:grid-cols-[96px_minmax(0,1fr)_110px_240px] xl:gap-4 xl:px-5 xl:py-3 ${fg} ${selected ? "bg-butter" : "hover:bg-paper/5"}`}
+      aria-label={`${h.room}, ${gradeLabel(h)}, rank ${h.rank}, ${fmt(h.total)} can-equivalents`}
+      className={`grid min-h-[60px] w-full grid-cols-[58px_minmax(0,1fr)_auto] items-center gap-3 px-3 py-2.5 text-left xl:min-h-16 xl:grid-cols-[96px_minmax(0,1fr)_170px_220px] xl:gap-4 xl:px-5 xl:py-3 ${fg} ${selected ? "bg-butter" : "hover:bg-paper/5"}`}
     >
       <span className="flex items-baseline gap-0.5 xl:gap-1">
         <span className="font-display text-[32px] leading-none font-black xl:text-[40px]">
@@ -147,14 +164,21 @@ function Row({ h, selected, onClick }: { h: Ranked; selected: boolean; onClick: 
       <span className="flex flex-col gap-0.5 xl:flex-row xl:items-center xl:gap-3">
         <span className="font-display text-2xl leading-none font-extrabold xl:text-[28px]">{h.room}</span>
         <span className="text-[12.5px] xl:text-[13px] xl:font-semibold">
-          <span className="xl:hidden">Grade {h.grade} </span>
-          {leader && "· Leader"}
+          <span className="xl:hidden">
+            {gradeLabel(h)}
+            {leader && " · "}
+          </span>
+          {leader && (
+            <span className="xl:border xl:border-current xl:px-1.5 xl:py-0.5 xl:font-mono xl:text-[11px] xl:tracking-[.1em] xl:uppercase">
+              Leader
+            </span>
+          )}
         </span>
       </span>
-      <span className="hidden text-base xl:block">Grade {h.grade}</span>
+      <span className="hidden text-base xl:block">{gradeLabel(h)}</span>
       <span className="flex flex-col items-end xl:flex-row xl:items-center xl:justify-end xl:gap-3.5">
         <span className="hidden h-2 w-[110px] bg-[rgb(127_127_127/.3)] xl:block">
-          <span className={`block h-full ${bar}`} style={{ width: `${Math.round((h.total / LEADER_TOTAL) * 100)}%` }} />
+          <span className={`block h-full ${bar}`} style={{ width: `${Math.round((h.total / leaderTotal) * 100)}%` }} />
         </span>
         <span className="font-display text-2xl leading-none font-extrabold xl:min-w-16 xl:text-right xl:text-[26px]">
           {fmt(h.total)}
@@ -179,7 +203,7 @@ function InlineDetail({ h }: { h: Ranked }) {
   return (
     <div className="flex flex-col gap-2.5 bg-paper px-4 pt-4 pb-[18px] text-ink xl:hidden">
       <span className="text-[13px] font-semibold">
-        Provisional dodgeball target · {h.students} students × 10
+        Dodgeball target · {h.students} students × 10
       </span>
       <div className="flex items-baseline gap-2">
         <span className="font-display text-[40px] leading-none font-black">{fmt(h.total)}</span>
@@ -210,13 +234,13 @@ function DetailCard({ h }: { h: Ranked }) {
           </span>
           <span className="font-display text-[88px] leading-[.8] font-black">{h.room}</span>
           <span className="text-[15px]">
-            Grade {h.grade} · Rank {h.rank} · {h.students} students
+            {gradeLabel(h)} · Rank {h.rank} · {h.students} students
           </span>
         </div>
         <Can variant="meter" fill={s.pct} className="h-[118px] w-[84px]" bodyClassName="bg-transparent" />
       </div>
       <div className="flex flex-col gap-2.5 border-t-2 border-ink pt-[18px]">
-        <span className="text-sm font-semibold">Provisional dodgeball target</span>
+        <span className="text-sm font-semibold">Dodgeball target</span>
         <div className="flex items-baseline gap-2.5">
           <span className="font-display text-[52px] leading-none font-black">{fmt(h.total)}</span>
           <span className="text-[17px]">

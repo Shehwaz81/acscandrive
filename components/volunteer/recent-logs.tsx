@@ -5,7 +5,7 @@ import { formatAmount, logAmount } from "@/lib/volunteer/money";
 import { useRecentLogs } from "@/lib/volunteer/provider";
 import { fullName } from "@/lib/volunteer/search";
 import { formatDay, formatTime, isTodayToronto } from "@/lib/volunteer/time";
-import { MONO_LABEL } from "@/lib/volunteer/ui";
+import { BTN_SECONDARY, MONO_LABEL } from "@/lib/volunteer/ui";
 
 const SHOWN = 8;
 /** Fetch extra rows so the footer can count today's logs. */
@@ -21,7 +21,14 @@ export function RecentLogs() {
       <h2 id="recent-logs-title" className={`${MONO_LABEL} border-b-2 border-ink pb-2`}>
         Recent logs · All volunteers
       </h2>
-      {!recent.data ? (
+      {recent.error ? (
+        <div role="alert" className="flex flex-col items-start gap-3 py-4 text-[14px] text-error">
+          Couldn’t load recent logs.
+          <button type="button" onClick={recent.retry} className={BTN_SECONDARY}>
+            Try again
+          </button>
+        </div>
+      ) : !recent.data ? (
         <p className="py-4 text-[14px] text-muted">Loading…</p>
       ) : (
         <ul>

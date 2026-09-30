@@ -2,7 +2,7 @@
 
 This is the running record of how the Can Drive site is built and why. Update it when a decision changes. Business rules and data constraints live in `CLAUDE.md`. This file covers the technical and design choices made to satisfy them.
 
-_Last updated: 2026-09-29. Current scope: public homepage frontend with demo data, and the volunteer workspace (`/volunteer`). The workspace searches the real `students` table; donation logs are still kept in browser memory. `/volunteer` and its API require an admin login (see [Volunteer login](#volunteer-login))._
+_Last updated: 2026-09-29. Current scope: the public homepage, which reads live totals from Supabase, and the volunteer workspace (`/volunteer`), which searches the real `students` table and saves to `donation_logs`. The collection map is still a schematic placeholder. `/volunteer` and its API require an admin login (see [Volunteer login](#volunteer-login))._
 
 ## Stack
 
@@ -27,7 +27,7 @@ The homepage is a port of the claude.ai/design file **Can Drive Homepage.dc.html
 ```
 app/
   layout.tsx          fonts, metadata, <html lang="en-CA">
-  page.tsx            homepage: skip link + header + sections + footer (static)
+  page.tsx            homepage: calls getHomepageData() once, passes props to the sections (ISR, 60s)
   globals.css         design tokens, base styles, effect utilities
   docs/page.tsx       renders docs/architecture.md
 components/
@@ -36,8 +36,10 @@ components/
   marks.tsx           marker underline, rubber stamp, school crest (public/acslogo.png)
   home/               one file per homepage section
 lib/
-  demo-data.ts        every number on the homepage + pure helpers
-  site.ts             nav links, content-width class
+  homepage.server.ts  getHomepageData(): reads Supabase, the only source of homepage figures
+  homepage.ts         types, buildHomepageData() (pure aggregation), display helpers
+  demo-data.ts        the collection map's schematic zone grid (still demo)
+  site.ts             nav links, content-width class, fixed drive details (DRIVE)
 docs/
   architecture.md     this file
 ```
@@ -52,7 +54,7 @@ Only three components ship JavaScript. Everything else renders to static HTML.
 | `home/standings.tsx` | Search, selection and the full-list toggle. |
 | `home/zone-map.tsx` | Zone selection. |
 
-The homepage prerenders as a static route (`○` in `next build`).
+The homepage prerenders as a static route (`○` in `next build`) and revalidates at most once a minute (see Data boundary).
 
 ## Responsive strategy: one tree, not two artboards
 
@@ -86,7 +88,7 @@ Checked at 320, 390, 768, 1024, 1280 and 1440 with no horizontal scroll.
 - *Permanent Marker* only for hand-written margin notes.
 - System monospace for labels.
 
-**Motif.** The can is the progress meter: large in the hero and small on the homeroom card. Rewards are torn-stub tickets, notes are marker scribbles, and anything unconfirmed gets a rubber stamp (“DEMO”, “Preview rules”).
+**Motif.** The can is the progress meter: large in the hero and small on the homeroom card. Rewards are torn-stub tickets, notes are marker scribbles, and short asides get a rubber stamp (“Official rules — good luck!”).
 
 **Effects** that would be unreadable as Tailwind arbitrary values are named utilities in `globals.css`: `ticket-mask`, `can-ribs`, `can-lid`, `hatch`, `progress-stripes` and `stub-label`. They are declared with `@utility`, so responsive variants like `lg:can-lid` work.
 
@@ -132,7 +134,7 @@ supabase/drafts/volunteer_workspace.sql   schema additions, not applied
 
 **Log flow state** is one reducer (`idle | saving | failed | saved`). While saving, every other action is ignored, and a ref guards against two saves starting in one render. A failure keeps every value and focuses "Try saving again"; success only shows once the write resolves.
 
-**Privacy.** Seed data is fictional. Student names only exist in `/volunteer` bundles (checked: the homepage's chunks contain none). The layout sets `robots: noindex, nofollow`. The guard (`lib/volunteer/guard.ts`) requires an admin login for both data sources; see [Volunteer login](#volunteer-login).
+**Privacy.** Seed data is fictional. Full student names only exist in `/volunteer` responses. The homepage shows only today's top donors as "First L." (see Data boundary). The layout sets `robots: noindex, nofollow`. The guard (`lib/volunteer/guard.ts`) requires an admin login for both data sources; see [Volunteer login](#volunteer-login).
 
 **Times** display in `America/Toronto`; "Today" means the Toronto calendar day.
 
@@ -207,7 +209,7 @@ browser (SupabaseVolunteerRepository, fetch)
 | --- | --- | --- | --- |
 | `lib/supabase/server.ts` | Publishable + session cookie | Applies | Server components, server actions, route handlers |
 | `lib/supabase/client.ts` | Publishable | Applies | Client components (nothing needs it yet) |
-| `lib/supabase/admin.ts` | Secret, `server-only` | Bypassed | Server code that has already checked authorization |
+| `lib/supabase/admin.ts` | Secret, `server-only` | Bypassed | Server code that has already checked authorization, and `getHomepageData()`, which returns only public aggregates |
 | `proxy.ts` → `lib/supabase/proxy.ts` | Publishable | n/a | Refreshes the auth cookie with `getClaims()` on each request |
 
 - **Why not `@supabase/server`:** it's a public-beta package built for header-based backends such as Edge Functions. In Next.js it still needs `@supabase/ssr` for cookies, plus hand-rolled JWKS caching. The supabase-js `auth.getClaims()` call already verifies JWTs.
@@ -216,18 +218,33 @@ browser (SupabaseVolunteerRepository, fetch)
 
 ## Data boundary
 
-Every figure on the homepage comes from **`lib/demo-data.ts`**. It holds the goal, school total, 16 homerooms, the fictional top donors and the zone grid, plus pure helpers:
+The homepage reads **live data** from Supabase. Every figure comes from **`getHomepageData()`** in `lib/homepage.server.ts`. `app/page.tsx` calls it once and passes plain props down; no section imports data itself.
 
-- `homeroomStats` computes the dodgeball target, percentage, split and status.
-- `matchesQuery` implements the standings search rule: `grade 9` or `g9` matches a grade, a bare number matches a grade, and anything else matches part of the homeroom code.
+```
+students + donation_logs  --admin client (server only)-->  getHomepageData()
+   (private rows)                                             |  buildHomepageData(): sums, groups, top 8 today
+                                                              v
+                                   { goal, total, homerooms[], topDonors[] }  -->  page (static, rebuilt at most once a minute)
+```
 
-When the database exists, the plan is:
+- **How:** `loadRoster()` (paged, reused from the volunteer desk) plus a keyset-paged read of `donation_logs` (`cans` and `cash` only; `online` stays out until refunds are defined). The aggregation is a pure function, `buildHomepageData()` in `lib/homepage.ts`, unit-tested on synthetic students in `lib/homepage.test.ts`.
+- **Why in TypeScript, not SQL:** it needs no migration and reuses the one rounding rule (`canEquivalents()`) instead of copying it into SQL. Reading about 1,100 students plus a few thousand logs at most once a minute is cheap. If volume ever grows, the upgrade is one SQL function that returns the same JSON, called from the same place.
+- **Rounding rule:** each student's total is `canEquivalents(cans, cents)` (partial dollars round down, per student). A homeroom's total is the sum of its students' totals, and the school total is the sum of the homerooms. Every level matches the volunteer dashboard.
+- **Homerooms** are the roster's `hr` values, all 58 of them, including tiny or non-class codes like `Office` or 1-student rooms (the owner's decision; a 1-student room's total reveals that student's amount). Many mix grades, so each has `grades: number[]` ("Grades 10, 11, 12"), and "grade 9" in the search matches any homeroom with a grade 9 student. They're sorted by total, then by room code.
+- **Top donors:** students with the highest can-equivalents **today** (America/Toronto day of `occurred_at`), top 8, shown as **first name + last initial** (owner's decision). Ties are ordered by name for display only; the lunch-voucher tie rule is unconfirmed.
+- **What is public:** the result is serialised into the page, because `Standings` is a client component. It contains only aggregates and today's top donors ("First L.", homeroom, total): no student IDs, full surnames, teachers or individual logs. Checked: the rendered page contains no `student_id` or `hr_teacher`, and no roster surname other than ordinary words already in the page copy.
+- **Freshness:** `export const revalidate = 60` (ISR). The page is served from cache and rebuilt in the background at most once a minute, so a saved donation shows up within about a minute. If a rebuild fails (for example, Supabase is down), the last good page keeps being served. `next build` also queries Supabase, so the env vars must be set wherever the site is built.
+- **Why the admin client is acceptable here:** it bypasses RLS and this page has no login. That's safe only because the function returns public aggregates. Adding a field to its result is a publishing decision.
 
-1. Replace the constants with **aggregate-only** server queries: school total, homeroom totals and daily top donors. These should come from a view or RPC that exposes only the fields the page shows.
-2. Keep the page a server component that fetches those aggregates and passes plain props to the client components. **No private student rows should reach the browser.**
-3. Move the reward maths (targets, can-equivalents, top-3 ties) into the single incentive-calculation module that `CLAUDE.md` requires. Do that only once the rules are confirmed.
+Fixed copy that isn't data lives in `DRIVE` in `lib/site.ts`: the goal (20,000 can-equivalents), drive dates, desk location and hours, and organizer contact. `lib/demo-data.ts` now holds only the collection map's schematic zone grid, which is still undecided.
 
-The cash split (`~27%`) and the “$1 = 1 can” wording are demo placeholders. Nothing on the page is a confirmed rule, which is why the page is stamped “Preview rules — awaiting confirmation”.
+Display helpers used by the client standings are in `lib/homepage.ts`: `homeroomStats` (dodgeball target, percentage, real cans/cash split, status), `matchesQuery` and `gradeLabel`. Move the reward maths into the single incentive-calculation module that `CLAUDE.md` requires once the rules are confirmed.
+
+**Rewards are confirmed** (owner, 2026-09-29), as shown on the page: $1 = 1 can; dress-down day at 10 cans or $10; lunch vouchers for the top 3 donors each day; a pizza party for the #1 homeroom; dodgeball for the first 20 homerooms to reach 10 cans per student. Public figures are labelled "cans" everywhere (hero and podium) even though they are can-equivalents, by the owner's choice, because it reads more cleanly; the hero copy explains $1 = 1 can. The site shows progress toward these rewards but doesn't decide winners: ties, cutoff times and the order in which homerooms qualify for dodgeball are for the organizers.
+
+### Hero meter
+
+Both meters derive the fill, the count and the notes from `(goal, total)` in one place (`progress()` in `hero.tsx`). The percentage is floored, so it never shows 100% while cans are still to go. The fill caps at the rim, and past the goal the notes read “Goal reached! +N over”. On desktop the can's inner box and the tick column are both 300px, so the fill maps 1:1 to the scale, and a pointer sits exactly on the fill line. Each meter is `role="img"` with a full `aria-label`.
 
 ## Accessibility
 
@@ -255,11 +272,10 @@ The cash split (`~27%`) and the “$1 = 1 can” wording are demo placeholders. 
 
 | Item | Needed from | Notes |
 | --- | --- | --- |
-| Branding | Owner | The Assumption College crest is in the header and footer. The tomato/butter palette is still not the school's colours. |
+| Branding | Owner | Decided: keep the tomato/butter palette. The Assumption College crest is in the header and footer. |
+| Desk days | Owner | The desk runs Oct 5–23, 7:30–8:10 a.m. It isn't confirmed whether that's every school day. |
 | Volunteer admins | Owner | Add the real admin logins in the SQL editor (see `CLAUDE.md`), and set `SESSION_SECRET` in Vercel before deploying. |
 | Log search/indexes and `updated_at` | Build | Logs are in `donation_logs`. `supabase/drafts/volunteer_workspace.sql` (indexes, `updated_at`, Postgres name search) is optional until volume or audit needs call for it. |
 | “Choose a collection area” flow | Owner + build | The link is `#`. The area model and booking rule are undecided, and the grid is a schematic placeholder. |
-| Incentive rules | Organizers | Dates, cutoffs, ties, dodgeball qualification order, and cash treatment. |
-| Public donor names | Owner | The page shows “First L.” names (fictional). How real names appear publicly is a privacy decision. |
-| Desk location, hours, organizer contact | Organizers | Shown as “TBC” boxes. |
+| Incentive details | Organizers | The rewards are confirmed. Still open, if the site should ever decide winners: daily cutoff times, ties, and how the dodgeball qualification order is recorded. |
 | Baseline migration history | Owner | `supabase/migrations/20260927000000_baseline_schema.sql` is already applied on the remote project but isn't recorded there. Run `pnpm exec supabase login`, then `link --project-ref gcrfsdmkcfywkofhijsi`, then `migration repair --status applied 20260927000000`. |

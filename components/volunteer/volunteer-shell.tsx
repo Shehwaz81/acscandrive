@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import type { ReactNode } from "react";
 import { logout } from "@/app/login/actions";
 import { SiteHeader } from "@/components/home/site-header";
+import { WRAP } from "@/lib/site";
 import { RepositoryProvider } from "@/lib/volunteer/provider";
 import { PrototypeControls } from "./prototype-controls";
 import { useHotkeys } from "./use-hotkeys";
@@ -49,7 +50,7 @@ export function VolunteerShell({ children }: { children: ReactNode }) {
         }
       />
       <WorkspaceTabs />
-      <main id="main" className="mx-auto w-full max-w-[1440px] px-4 py-5 md:px-7 md:py-7 lg:px-8 lg:py-8">
+      <main id="main" className={`${WRAP} py-5 md:py-7 lg:py-8`}>
         {children}
       </main>
       <PrototypeControls />

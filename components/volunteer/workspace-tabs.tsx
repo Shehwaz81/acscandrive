@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { WRAP } from "@/lib/site";
 import { KBD, MONO_LABEL } from "@/lib/volunteer/ui";
 
 const TABS = [
@@ -13,7 +14,7 @@ export function WorkspaceTabs() {
   const pathname = usePathname();
   return (
     <div className="bg-ink text-paper">
-      <div className="mx-auto flex max-w-[1440px] flex-col gap-2 px-4 pt-3 md:flex-row md:items-center md:gap-6 md:px-7 md:pt-0 lg:px-8">
+      <div className={`${WRAP} flex flex-col gap-2 pt-3 md:flex-row md:items-center md:gap-6 md:pt-0`}>
         <p className={`${MONO_LABEL} text-butter`}>Volunteer desk</p>
         <nav aria-label="Volunteer workspace" className="grid grid-cols-2 md:flex">
           {TABS.map((t) => {

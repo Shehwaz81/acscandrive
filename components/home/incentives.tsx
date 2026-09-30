@@ -2,7 +2,7 @@ import { Stamp } from "@/components/marks";
 import { Ticket } from "@/components/ticket";
 import { WRAP } from "@/lib/site";
 
-// Reward rules are from reference material and still unconfirmed (see CLAUDE.md).
+// Reward rules as confirmed by the owner (2026-09-29).
 export function Incentives() {
   return (
     <section
@@ -24,7 +24,7 @@ export function Incentives() {
               Four rewards, two ways to earn them: on your own, or together with your homeroom.
             </p>
             <Stamp className="-rotate-2 self-start border-ink px-2 py-1 text-[11.5px] font-semibold tracking-normal lg:px-2.5 lg:py-[5px] lg:text-[12.5px]">
-              Preview rules — awaiting confirmation.
+              Official rules — good luck!
             </Stamp>
           </div>
         </div>
@@ -127,8 +127,8 @@ export function Incentives() {
 
 function GroupHeading({ title, note }: { title: string; note: string }) {
   return (
-    <div className="flex items-baseline gap-2.5 border-b-2 border-ink pb-2 lg:gap-3 lg:pb-2.5">
-      <span className="font-display text-[26px] font-black uppercase lg:text-[30px]">{title}</span>
+    <div className="flex flex-wrap items-baseline gap-x-2.5 gap-y-0.5 border-b-2 border-ink pb-2 lg:gap-x-3 lg:pb-2.5">
+      <span className="font-display text-[26px] font-black whitespace-nowrap uppercase lg:text-[30px]">{title}</span>
       <span className="text-[13px] text-muted lg:text-sm">{note}</span>
     </div>
   );

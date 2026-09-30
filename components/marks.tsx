@@ -33,7 +33,7 @@ export function MarkerUnderline({
   );
 }
 
-/** Rubber stamp for anything unconfirmed or demo-only. */
+/** Rubber stamp: a short, hand-stamped note. */
 export function Stamp({ children, className = "" }: { children: ReactNode; className?: string }) {
   return (
     <span className={`inline-block border-2 font-mono font-bold tracking-[.12em] ${className}`}>
