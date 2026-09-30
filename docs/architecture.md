@@ -33,7 +33,7 @@ app/
 components/
   can.tsx             the CSS can (progress meter + podium block)
   ticket.tsx          torn-stub reward ticket
-  marks.tsx           marker underline, rubber stamp, school crest (public/acslogo.png)
+  marks.tsx           marker underline, school crest (public/acslogo.png)
   home/               one file per homepage section
 lib/
   homepage.server.ts  getHomepageData(): reads Supabase, the only source of homepage figures
@@ -88,7 +88,7 @@ Checked at 320, 390, 768, 1024, 1280 and 1440 with no horizontal scroll.
 - *Permanent Marker* only for hand-written margin notes.
 - System monospace for labels.
 
-**Motif.** The can is the progress meter: large in the hero and small on the homeroom card. Rewards are torn-stub tickets, notes are marker scribbles, and anything unconfirmed gets a rubber stamp (“DEMO”, “Preview rules”).
+**Motif.** The can is the progress meter: large in the hero and small on the homeroom card. Rewards are torn-stub tickets, notes are marker scribbles. (A rubber-stamp mark flagged demo figures and unconfirmed rules; it was removed once the data went live and the rules were confirmed.)
 
 **Effects** that would be unreadable as Tailwind arbitrary values are named utilities in `globals.css`: `ticket-mask`, `can-ribs`, `can-lid`, `hatch`, `progress-stripes` and `stub-label`. They are declared with `@utility`, so responsive variants like `lg:can-lid` work.
 
@@ -238,9 +238,9 @@ students + donation_logs  --admin client (server only)-->  getHomepageData()
 
 Fixed copy that isn't data lives in `DRIVE` in `lib/site.ts`: the goal (20,000 can-equivalents), drive dates, desk location and hours, and organizer contact. `lib/demo-data.ts` now holds only the collection map's schematic zone grid, which is still undecided.
 
-Display helpers used by the client standings are in `lib/homepage.ts`: `homeroomStats` (provisional dodgeball target, percentage, real cans/cash split, status), `matchesQuery` and `gradeLabel`. Move the reward maths into the single incentive-calculation module that `CLAUDE.md` requires once the rules are confirmed.
+Display helpers used by the client standings are in `lib/homepage.ts`: `homeroomStats` (dodgeball target, percentage, real cans/cash split, status), `matchesQuery` and `gradeLabel`. Move the reward maths into the single incentive-calculation module that `CLAUDE.md` requires once the rules are confirmed.
 
-**$1 = 1 can is confirmed.** The hero labels its total "can-equivalents (cans + cash)". The podium and runners-up say "cans" for the same can-equivalent figures, by the owner's choice, because it reads more cleanly. The reward rules are still unconfirmed, which is why the incentives are stamped "Preview rules — awaiting confirmation".
+**Rewards are confirmed** (owner, 2026-09-29), as shown on the page: $1 = 1 can; dress-down day at 10 cans or $10; lunch vouchers for the top 3 donors each day; a pizza party for the #1 homeroom; dodgeball for the first 20 homerooms to reach 10 cans per student. Public figures are labelled "cans" everywhere (hero and podium) even though they are can-equivalents, by the owner's choice, because it reads more cleanly; the hero copy explains $1 = 1 can. The site shows progress toward these rewards but doesn't decide winners: ties, cutoff times and the order in which homerooms qualify for dodgeball are for the organizers.
 
 ### Hero meter
 
@@ -277,5 +277,5 @@ Both meters derive the fill, the count and the notes from `(goal, total)` in one
 | Volunteer admins | Owner | Add the real admin logins in the SQL editor (see `CLAUDE.md`), and set `SESSION_SECRET` in Vercel before deploying. |
 | Log search/indexes and `updated_at` | Build | Logs are in `donation_logs`. `supabase/drafts/volunteer_workspace.sql` (indexes, `updated_at`, Postgres name search) is optional until volume or audit needs call for it. |
 | “Choose a collection area” flow | Owner + build | The link is `#`. The area model and booking rule are undecided, and the grid is a schematic placeholder. |
-| Incentive rules | Organizers | Dates, cutoffs, ties, dodgeball qualification order, and cash treatment. |
+| Incentive details | Organizers | The rewards are confirmed. Still open, if the site should ever decide winners: daily cutoff times, ties, and how the dodgeball qualification order is recorded. |
 | Baseline migration history | Owner | `supabase/migrations/20260927000000_baseline_schema.sql` is already applied on the remote project but isn't recorded there. Run `pnpm exec supabase login`, then `link --project-ref gcrfsdmkcfywkofhijsi`, then `migration repair --status applied 20260927000000`. |

@@ -134,7 +134,7 @@ export const ordinalSuffix = (n: number) => {
 export const gradeLabel = (h: Pick<Homeroom, "grades">) =>
   h.grades.length === 1 ? `Grade ${h.grades[0]}` : `Grades ${h.grades.join(", ")}`;
 
-/** Provisional dodgeball target: class size × 10 (unconfirmed rule). */
+/** Dodgeball target: class size × 10 (confirmed rule). */
 export function homeroomStats(h: Homeroom) {
   const target = h.students * 10;
   const pct = Math.min(100, Math.round((h.total / target) * 100));

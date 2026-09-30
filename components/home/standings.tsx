@@ -14,7 +14,7 @@ import { WRAP } from "@/lib/site";
 
 const TOP_N = 8;
 const QUALIFY_NOTE =
-  "Hitting the target doesn’t lock in a spot yet — qualification rules are still being confirmed.";
+  "The first 20 homerooms to hit their target play.";
 
 export function Standings({ homerooms }: { homerooms: Homeroom[] }) {
   const [query, setQuery] = useState("");
@@ -203,7 +203,7 @@ function InlineDetail({ h }: { h: Ranked }) {
   return (
     <div className="flex flex-col gap-2.5 bg-paper px-4 pt-4 pb-[18px] text-ink xl:hidden">
       <span className="text-[13px] font-semibold">
-        Provisional dodgeball target · {h.students} students × 10
+        Dodgeball target · {h.students} students × 10
       </span>
       <div className="flex items-baseline gap-2">
         <span className="font-display text-[40px] leading-none font-black">{fmt(h.total)}</span>
@@ -240,7 +240,7 @@ function DetailCard({ h }: { h: Ranked }) {
         <Can variant="meter" fill={s.pct} className="h-[118px] w-[84px]" bodyClassName="bg-transparent" />
       </div>
       <div className="flex flex-col gap-2.5 border-t-2 border-ink pt-[18px]">
-        <span className="text-sm font-semibold">Provisional dodgeball target</span>
+        <span className="text-sm font-semibold">Dodgeball target</span>
         <div className="flex items-baseline gap-2.5">
           <span className="font-display text-[52px] leading-none font-black">{fmt(h.total)}</span>
           <span className="text-[17px]">

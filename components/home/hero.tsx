@@ -24,7 +24,7 @@ function progress({ goal, total }: Progress) {
         ? `+${fmt(total - goal)} over`
         : "Right on target."
       : `${fmt(goal - total)} to go!`,
-    label: `${fmt(total)} of ${fmt(goal)} can-equivalents collected (${reached ? "goal reached" : `${pct}%`})`,
+    label: `${fmt(total)} of ${fmt(goal)} cans collected (${reached ? "goal reached" : `${pct}%`})`,
   };
 }
 
@@ -87,14 +87,13 @@ function CompactMeter({ goal, total, p }: MeterProps) {
       <div className="flex flex-1 flex-col justify-between gap-2">
         <div className="flex items-baseline gap-2 border-b-2 border-dashed border-ink pt-1 pb-1.5">
           <span className="font-mono text-[10.5px] font-bold tracking-[.12em]">GOAL</span>
-          <span className="font-display text-[26px] leading-none font-black">{fmt(goal)} cans</span>
-        </div>
-        <div className="flex flex-col gap-0.5">
-          <span className="font-display text-[54px] leading-[.9] font-black md:text-[72px]">{fmt(total)}</span>
-          <span className="text-[13.5px] font-semibold">
-            can-equivalents collected
-            <span className="block font-normal text-muted">cans + cash, $1 = 1 can</span>
+          <span className="font-display text-[26px] leading-none font-black">
+            {fmt(goal)} <span className="text-[17px] font-extrabold uppercase">cans</span>
           </span>
+        </div>
+        <div className="flex items-baseline gap-2 md:gap-3">
+          <span className="font-display text-[54px] leading-[.9] font-black md:text-[72px]">{fmt(total)}</span>
+          <span className="font-display text-[26px] leading-none font-extrabold uppercase md:text-[34px]">cans</span>
         </div>
         <span className="origin-left -rotate-3 font-marker text-[17px] leading-[1.1] text-error md:text-xl">
           {p.progressNote} {!p.reached && "— "}
@@ -153,14 +152,11 @@ function BigCanMeter({ goal, total, p }: MeterProps) {
       >
         ←
       </span>
-      <div className="absolute left-[330px] flex flex-col gap-1 whitespace-nowrap" style={readoutStyle}>
-        <span className="font-display text-[52px] leading-[.9] font-black">{fmt(total)}</span>
-        <span className="text-[13px] leading-snug font-semibold">
-          can-equivalents
-          <br />
-          <span className="font-normal text-muted">cans + cash</span>
-        </span>
-        <span className="mt-1.5 origin-left -rotate-4 font-marker text-lg leading-[1.15] text-error">
+      {/* Same lockup as the goal in the corner (numerals over CANS), one size down. */}
+      <div className="absolute left-[330px] flex flex-col whitespace-nowrap" style={readoutStyle}>
+        <span className="font-display text-[64px] leading-[.82] font-black">{fmt(total)}</span>
+        <span className="mt-2 font-display text-[28px] leading-none font-extrabold tracking-[.02em] uppercase">cans</span>
+        <span className="mt-3 origin-left -rotate-4 font-marker text-lg leading-[1.15] text-error">
           {p.progressNote}
           <br />
           {p.toGoNote}
