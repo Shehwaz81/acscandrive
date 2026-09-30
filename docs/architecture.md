@@ -206,7 +206,7 @@ browser (SupabaseVolunteerRepository, fetch)
 
 ## Collection map
 
-The `#map` section (`components/home/collection-map.tsx`) lets a student search for a street and see it on a Google map. That is all: the pick lives only in component state, and nothing is written anywhere. The future reservation form will read it from that state.
+The `#map` section (`components/home/collection-map.tsx`) lets a student search for a street, see it on a Google map and **claim** it with their name and homeroom (see [Street claims](#street-claims)).
 
 - **Components:** the Maps JavaScript API's `PlaceAutocompleteElement` (Places API New, GA), `google.maps.Map` and `AdvancedMarkerElement`, all created in an effect. No npm package ships to the browser (`@types/google.maps` is types only). The Extended Component Library's `gmpx-place-picker` was not used: it's pre-1.0 and needs an extra package or script for the same result.
 - **Loading:** the client component adds the script once (`loadMaps()`), only when the section mounts, so only the homepage loads it. It uses `loading=async&callback=…` because `google.maps.importLibrary` exists only once Google calls the callback. `next/script`'s `onReady` fires at the load event, which is too early.
@@ -218,6 +218,27 @@ The `#map` section (`components/home/collection-map.tsx`) lets a student search 
 - **Fields fetched:** `types`, `addressComponents`, `location`, `viewport`. The display name isn't needed, because the street name comes from the `route` component.
 - **Map ID:** Advanced Markers need one. `NEXT_PUBLIC_GOOGLE_MAP_ID` (vector, from Maps Management) is used. In development only, it falls back to Google's `DEMO_MAP_ID`.
 - **Missing key or failure:** without a key (or, in production, a Map ID) the section renders a “not set up yet” message and loads nothing. A script error, an auth failure (`gm_authFailure`) or an init error shows “The map couldn't load”, and a failed search shows an inline message.
+
+### Street claims
+
+Owner's decisions (2026-09-30), deliberately the simplest booking that works:
+
+- **Identity:** the student types their **full name** and picks their **homeroom**. The server matches exactly one `students` row (trimmed, case-insensitive, repeated spaces collapsed; `matchStudent()` in `lib/claims.ts`, unit-tested). No match, or two students with that name in that homeroom, gives "We couldn't find you. Check your name and homeroom, or ask at the desk." Roster names never reach the browser and nothing is suggested. The homeroom `<select>` is filled from the standings' homeroom codes, which are already public.
+- **Rules:** one claimer per street (`place_id` is unique); a student may claim any number of streets; no dates, so a claim lasts the whole drive; no editing. The claimer deletes it by re-entering the same name and homeroom, and organizers can delete a row in the SQL editor. Deleting removes the row and the street is open again. The Essex County street check above still applies.
+- **Table:** `public.street_claims` (`id`, `student_id` → `students`, `place_id` unique, `address` like "Ouellette Avenue, Windsor", `lat`/`lng` for the marker, `created_at`). RLS on, no policies: server-only, like the other tables. `lat`/`lng` exist only so markers can be drawn without calling Google per claim.
+- **Routes** (`app/api/claims/route.ts`, no login, admin client, so each handler is the rule):
+  - `GET` → `[{ placeId, address, lat, lng, claimer }]`, built by the pure `buildClaims()`. `no-store`; the page stays ISR and the browser fetches claims itself, so they're never a minute stale.
+  - `POST { name, homeroom, placeId, address, lat, lng }` → 200 `{ claim }`; 409 `{ claim }` when someone else holds the street; 404 for an unknown student; 400 for bad input (lengths, and coordinates must be inside the Essex County search rectangle); 502 on a database failure. The unique constraint settles races: the loser reads the existing row, and if it's the **same student** (a double click or retry) the answer is still 200, so a retry never creates a second row.
+  - `DELETE { placeId, name, homeroom }` → one statement, `delete … where place_id = $1 and student_id = $2`. 200 if a row was deleted or no claim exists (so retries are safe); 403 "That name and homeroom don't match this claim." if the claim exists but isn't theirs, including an unknown name. It never says whose claim it is beyond the public label.
+- **What is public:** the claimer as **"First L. (homeroom)"**, like top donors, plus the street and its marker position. No student IDs, surnames, grades or teachers. Checked: the `GET` response and the page source contain neither.
+- **Map UI:** each claim is a dark `AdvancedMarkerElement` pin (`gmpClickable`, titled with the street). Clicking it, or Tab to it and Enter, selects the claim in the React result panel (never an InfoWindow of HTML strings) and moves focus there. Picking a claimed street from the search shows "Taken — claimed by …" instead of the form. Both views have **Delete my claim**, which opens an inline name + homeroom confirm. A "Claimed streets" list sits under the map. The typed name and homeroom are kept across streets, so claiming several needs one entry, and they are kept after an error.
+
+**Known limits** (accepted, not built around):
+
+- Anyone who knows a classmate's name and homeroom can claim **or delete** in that classmate's name. Organizers correct it in SQL.
+- The server trusts the `placeId`, `address` and coordinates the browser sends; the Essex County street check runs only in the browser (the server only checks the coordinates fall in the county's rectangle). Re-checking with Places on the server would need a server-side key. Follow-up.
+- No rate limiting, CAPTCHA or other spam protection.
+- A deleted claim leaves no history.
 
 ### The API key is public, so it's restricted
 
@@ -290,7 +311,7 @@ Both meters derive the fill, the count and the notes from `(goal, total)` in one
 
 ## Deliberately not built yet
 
-- Reservations: the map picks a street but saves nothing, and draws no segments or areas. Auth is a single admin login table (see Volunteer login).
+- Street segments or areas: a claim is a whole street (one Google place), drawn as one marker. Auth is a single admin login table (see Volunteer login).
 - The design-tool runtime (`support.js`).
 - Dark mode (see Visual system).
 
@@ -302,7 +323,7 @@ Both meters derive the fill, the count and the notes from `(goal, total)` in one
 | Desk days | Owner | The desk runs Oct 5–23, 7:30–8:10 a.m. It isn't confirmed whether that's every school day. |
 | Volunteer admins | Owner | Add the real admin logins in the SQL editor (see `CLAUDE.md`), and set `SESSION_SECRET` in Vercel before deploying. |
 | Log search/indexes and `updated_at` | Build | Logs are in `donation_logs`. `supabase/drafts/volunteer_workspace.sql` (indexes, `updated_at`, Postgres name search) is optional until volume or audit needs call for it. |
-| Street reservations | Owner + build | Students can pick a street, but nothing is saved. The booking rule (blocks a date or the street until then), what a reservation records and edit credentials are undecided (see the `street-reservations` skill). |
+| Street claims | Owner + build | Built as the simplest version (see [Street claims](#street-claims)). Open: whether impersonation, spam or the browser-trusted street check ever need more than organizers fixing rows in SQL. |
 | Google Cloud key settings | Owner | Apply the referrer and API restrictions in [Collection map](#collection-map), and set both `NEXT_PUBLIC_GOOGLE_*` variables in Vercel. |
 | Incentive details | Organizers | The rewards are confirmed. Still open, if the site should ever decide winners: daily cutoff times, ties, and how the dodgeball qualification order is recorded. |
-| Baseline migration history | Owner | `supabase/migrations/20260927000000_baseline_schema.sql` is already applied on the remote project but isn't recorded there. Run `pnpm exec supabase login`, then `link --project-ref gcrfsdmkcfywkofhijsi`, then `migration repair --status applied 20260927000000`. |
+| Baseline migration history | Owner | `supabase/migrations/20260927000000_baseline_schema.sql` is already applied on the remote project but isn't recorded there. Run `pnpm exec supabase login`, then `link --project-ref gcrfsdmkcfywkofhijsi`, then `migration repair --status applied 20260927000000`. The two admin migrations are recorded remotely as `20260929171156` and `20260929200832`, not their local file versions, so repair those too (or rename the files); `20260930140622_street_claims.sql` already matches. |
