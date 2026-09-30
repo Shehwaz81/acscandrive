@@ -33,7 +33,7 @@ app/
 components/
   can.tsx             the CSS can (progress meter + podium block)
   ticket.tsx          torn-stub reward ticket
-  marks.tsx           marker underline, school crest (public/acslogo.png)
+  marks.tsx           marker underline, rubber stamp, school crest (public/acslogo.png)
   home/               one file per homepage section
 lib/
   homepage.server.ts  getHomepageData(): reads Supabase, the only source of homepage figures
@@ -88,7 +88,7 @@ Checked at 320, 390, 768, 1024, 1280 and 1440 with no horizontal scroll.
 - *Permanent Marker* only for hand-written margin notes.
 - System monospace for labels.
 
-**Motif.** The can is the progress meter: large in the hero and small on the homeroom card. Rewards are torn-stub tickets, notes are marker scribbles. (A rubber-stamp mark flagged demo figures and unconfirmed rules; it was removed once the data went live and the rules were confirmed.)
+**Motif.** The can is the progress meter: large in the hero and small on the homeroom card. Rewards are torn-stub tickets, notes are marker scribbles, and short asides get a rubber stamp (“Official rules — good luck!”).
 
 **Effects** that would be unreadable as Tailwind arbitrary values are named utilities in `globals.css`: `ticket-mask`, `can-ribs`, `can-lid`, `hatch`, `progress-stripes` and `stub-label`. They are declared with `@utility`, so responsive variants like `lg:can-lid` work.
 

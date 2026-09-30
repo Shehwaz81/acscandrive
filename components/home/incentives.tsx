@@ -1,3 +1,4 @@
+import { Stamp } from "@/components/marks";
 import { Ticket } from "@/components/ticket";
 import { WRAP } from "@/lib/site";
 
@@ -22,10 +23,9 @@ export function Incentives() {
             <p className="text-base leading-[1.45] text-pretty lg:text-xl">
               Four rewards, two ways to earn them: on your own, or together with your homeroom.
             </p>
-            <p className="max-w-[440px] border-l-4 border-tomato pl-3 text-[14.5px] leading-normal text-body lg:text-base">
-              Everything logged at the desk counts, and every $1 counts as one can. The standings update about
-              once a minute.
-            </p>
+            <Stamp className="-rotate-2 self-start border-ink px-2 py-1 text-[11.5px] font-semibold tracking-normal lg:px-2.5 lg:py-[5px] lg:text-[12.5px]">
+              Official rules — good luck!
+            </Stamp>
           </div>
         </div>
 
