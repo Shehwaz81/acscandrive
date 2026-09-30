@@ -40,6 +40,7 @@ lib/
   homepage.server.ts  getHomepageData(): reads Supabase, the only source of homepage figures
   homepage.ts         types, buildHomepageData() (pure aggregation), display helpers
   collection-area.ts  the street check for the collection map (Essex County, whole streets, no highways)
+  grade-wars/         Grade Wars: types, rankDay(), repository interface, mock, Supabase stub, useGradeWars()
   site.ts             nav links, content-width class, fixed drive details (DRIVE)
 docs/
   architecture.md     this file
@@ -47,13 +48,14 @@ docs/
 
 ### Server vs. client components
 
-Only three components ship JavaScript. Everything else renders to static HTML.
+Only four homepage sections ship JavaScript. Everything else renders to static HTML.
 
 | Component | Why it is a client component |
 | --- | --- |
 | `home/site-header.tsx` | Mobile menu open/close, including closing on Escape. |
 | `home/standings.tsx` | Search, selection and the full-list toggle. |
 | `home/collection-map.tsx` | Loads Google Maps and holds the picked street. |
+| `home/grade-wars/grade-wars.tsx` | Fetches daily grade results in the browser and holds the selected day. |
 
 The homepage prerenders as a static route (`○` in `next build`) and revalidates at most once a minute (see Data boundary).
 
@@ -293,6 +295,18 @@ Display helpers used by the client standings are in `lib/homepage.ts`: `homeroom
 ### Hero meter
 
 Both meters derive the fill, the count and the notes from `(goal, total)` in one place (`progress()` in `hero.tsx`). The percentage is floored, so it never shows 100% while cans are still to go. The fill caps at the rim, and past the goal the notes read “Goal reached! +N over”. On desktop the can's inner box and the tick column are both 300px, so the fill maps 1:1 to the scale, and a pointer sits exactly on the fill line. Each meter is `role="img"` with a full `aria-label`.
+
+## Grade Wars (demo data)
+
+A daily ranking of Grades 9–12, one collection day at a time, between The Standings and Top Donors. It is **frontend only**: every figure is fictional and labelled "DEMO DATA".
+
+- **Seam:** the UI reads only through `useGradeWars()`, which calls a `GradeWarsRepository` (`lib/grade-wars/`). `NEXT_PUBLIC_DATA_SOURCE` picks the implementation: `mock` (default) or `supabase`, which is a stub whose methods throw "Not implemented". Unlike the other homepage sections it fetches in the browser, not through `getHomepageData()`.
+- **Ranking** is the pure, tested `rankDay()`: can-equivalents via `toCanEquivalents()` (the same `canEquivalents()` rule as everywhere else), competition ranking (305, 305, 270, 240 → 1, 1, 3, 4), no tiebreaker; equal totals list by grade for display only.
+- **Stale responses** are dropped: a result is shown only if it answers the currently selected day and retry attempt.
+- **Podium height is place, not amount** (4 rows of cans for 1st down to 1 for 4th); the breakdown list is the accessible ranking and the podium is `aria-hidden`. Columns are keyed by grade so they slide on date change; `motion-reduce` makes that instant.
+- **No reward is shown.** The daily recognition for the top grade is unconfirmed; the section says so and nothing more.
+- **Dev switches** (ignored in production builds): `?gw=loading`, `?gw=error`, `?gw=live` (marks the latest day in progress).
+- **To go live:** a public route handler that reads `donation_logs` + `students` with the admin client and returns per-grade, per-Toronto-day `cans`/`cash_cents` sums (see the comment in `lib/grade-wars/supabase.ts`), then implement `SupabaseGradeWarsRepository` against it. Decide first whether a grade with one donor on a day (which reveals that student's amount) is acceptable.
 
 ## Accessibility
 

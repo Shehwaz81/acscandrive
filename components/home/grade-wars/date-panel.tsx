@@ -44,9 +44,9 @@ export function DatePanel({
     "flex size-[52px] flex-none items-center justify-center border-2 border-paper font-display text-2xl font-black aria-disabled:opacity-35 lg:size-14";
 
   return (
-    <div className="flex flex-col gap-4 bg-ink p-4 text-paper shadow-[8px_8px_0_var(--color-butter)] lg:gap-5 lg:p-6">
-      <div className="hidden items-center justify-between gap-4 lg:flex">
-        <span className="font-mono text-xs font-semibold tracking-[.14em] text-rule">
+    <div className="flex min-w-0 flex-col gap-4 bg-ink p-4 text-paper shadow-[8px_8px_0_var(--color-butter)] lg:gap-5 lg:p-6">
+      <div className="hidden flex-wrap items-center justify-between gap-x-4 gap-y-1 lg:flex">
+        <span className="font-mono text-xs font-semibold tracking-[.14em] whitespace-nowrap text-rule">
           COLLECTION DAY{position && ` · ${position}`}
         </span>
         <BackToLatest
@@ -56,7 +56,7 @@ export function DatePanel({
         />
       </div>
 
-      <div className="flex items-center gap-3">
+      <div className="flex items-center gap-2 lg:gap-3">
         <button
           type="button"
           aria-label="Previous day"
@@ -70,7 +70,7 @@ export function DatePanel({
           <span className="font-mono text-[11px] font-semibold tracking-[.14em] text-rule lg:hidden">
             {position ? `DAY ${position}` : " "}
           </span>
-          <span className="font-display text-[38px] leading-[.9] font-black whitespace-nowrap text-butter uppercase lg:text-[64px]">
+          <span className="font-display text-[clamp(1.6rem,8.5vw,2.375rem)] leading-[.9] font-black whitespace-nowrap text-butter uppercase lg:text-[clamp(3rem,4.4vw,4rem)]">
             {day ? shortDate(day.date) : "—"}
           </span>
         </div>
@@ -135,7 +135,7 @@ function BackToLatest({
       type="button"
       aria-disabled={atLatest}
       onClick={() => !atLatest && onClick()}
-      className={`flex items-center font-semibold ${
+      className={`flex items-center font-semibold whitespace-nowrap ${
 atLatest ? "text-rule" : "text-butter"} ${className}`}
     >
       {atLatest ? "Showing latest day" : "Back to latest day →"}

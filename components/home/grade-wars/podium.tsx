@@ -74,9 +74,9 @@ export function Podium({ board, demo }: { board: Board; demo: boolean }) {
     <div aria-hidden className="w-full max-w-[800px]">
       <div className="relative h-[330px] lg:h-[540px]">
         {demo && (
-          <Stamp className="absolute top-0 right-0 hidden rotate-6 border-tomato px-2.5 py-1 text-[12px] text-tomato lg:block">
-            DEMO DATA
-          </Stamp>
+          <span className="absolute top-0 right-0 hidden lg:block">
+            <Stamp className="rotate-6 border-tomato px-2.5 py-1 text-[12px] text-tomato">DEMO DATA</Stamp>
+          </span>
         )}
         {mobileNote && (
           <span className="absolute top-1 right-0 max-w-[46%] -rotate-5 text-right font-marker text-lg leading-[1.15] text-tomato lg:hidden">
@@ -125,7 +125,12 @@ function PodiumColumn({ column: c }: { column: Column }) {
             "—"
           )}
         </span>
-        {c.tag && <GradeTag {...c.tag} className="mt-1.5 hidden lg:inline-block" />}
+        {/* Tags live in the breakdown only on phones. */}
+        {c.tag && (
+          <span className="mt-1.5 hidden lg:block">
+            <GradeTag {...c.tag} />
+          </span>
+        )}
         <span className="mt-1 font-mono text-[10px] font-semibold tracking-[.14em] text-muted lg:mt-2 lg:text-xs">
           GRADE
         </span>

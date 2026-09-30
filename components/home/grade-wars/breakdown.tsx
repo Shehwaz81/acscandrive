@@ -32,7 +32,7 @@ export function Breakdown({ board, date }: { board: Board; date: string | null }
 
   return (
     <div className="flex flex-col">
-      <div className="flex justify-between border-b-4 border-ink pb-2 font-mono text-[11px] font-semibold tracking-[.12em] text-muted lg:text-xs">
+      <div className="flex justify-between gap-3 border-b-4 border-ink pb-2 font-mono text-[10px] font-semibold tracking-[.08em] whitespace-nowrap text-muted min-[390px]:text-[11px] lg:text-xs lg:tracking-[.12em]">
         <span>ALL FOUR GRADES{date && ` · ${shortDate(date).toUpperCase()}`}</span>
         <span>CAN-EQ.</span>
       </div>
