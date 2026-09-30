@@ -2,7 +2,7 @@
 
 This is the running record of how the Can Drive site is built and why. Update it when a decision changes. Business rules and data constraints live in `CLAUDE.md`. This file covers the technical and design choices made to satisfy them.
 
-_Last updated: 2026-09-29. Current scope: the public homepage, which reads live totals from Supabase, and the volunteer workspace (`/volunteer`), which searches the real `students` table and saves to `donation_logs`. The collection map is still a schematic placeholder. `/volunteer` and its API require an admin login (see [Volunteer login](#volunteer-login))._
+_Last updated: 2026-09-30. Current scope: the public homepage, which reads live totals from Supabase, and the volunteer workspace (`/volunteer`), which searches the real `students` table and saves to `donation_logs`. The collection map is a Google street picker with no booking yet (see [Collection map](#collection-map)). `/volunteer` and its API require an admin login (see [Volunteer login](#volunteer-login))._
 
 ## Stack
 
@@ -16,6 +16,7 @@ _Last updated: 2026-09-29. Current scope: the public homepage, which reads live 
 | Tests | Vitest + Testing Library (jsdom) | `pnpm test`. Unit tests for pure modules; component tests for the log flow. |
 | Hosting (planned) | Vercel | |
 | Data | Supabase/Postgres via `@supabase/ssr` + `@supabase/supabase-js` | See [Supabase connection](#supabase-connection). |
+| Maps | Google Maps JavaScript API + Places API (New), loaded at runtime | Browser key, restricted by referrer and API. See [Collection map](#collection-map). |
 | Volunteer auth | `public.admin` table (bcrypt via `pgcrypto`) + HMAC-signed cookie | No auth library. See [Volunteer login](#volunteer-login). |
 
 ## Source of the design
@@ -38,7 +39,7 @@ components/
 lib/
   homepage.server.ts  getHomepageData(): reads Supabase, the only source of homepage figures
   homepage.ts         types, buildHomepageData() (pure aggregation), display helpers
-  demo-data.ts        the collection map's schematic zone grid (still demo)
+  collection-area.ts  the street check for the collection map (Essex County, whole streets, no highways)
   site.ts             nav links, content-width class, fixed drive details (DRIVE)
 docs/
   architecture.md     this file
@@ -52,7 +53,7 @@ Only three components ship JavaScript. Everything else renders to static HTML.
 | --- | --- |
 | `home/site-header.tsx` | Mobile menu open/close, including closing on Escape. |
 | `home/standings.tsx` | Search, selection and the full-list toggle. |
-| `home/zone-map.tsx` | Zone selection. |
+| `home/collection-map.tsx` | Loads Google Maps and holds the picked street. |
 
 The homepage prerenders as a static route (`○` in `next build`) and revalidates at most once a minute (see Data boundary).
 
@@ -78,8 +79,8 @@ Checked at 320, 390, 768, 1024, 1280 and 1440 with no horizontal scroll.
 | `ink` | `#1B1A17` | Text, rules, dark sections |
 | `paper` | `#F4EEE2` | Page background |
 | `kraft` | `#E9E0CD` | Alternate section background |
-| `tomato` | `#C8432A` | Goal, homeroom rewards, “school” zone |
-| `butter` | `#F2C230` | Highlights, selection, focus ring, “open” zone |
+| `tomato` | `#C8432A` | Goal, homeroom rewards |
+| `butter` | `#F2C230` | Highlights, selection, focus ring |
 | `muted` / `body` / `rule` | `#5B554B` / `#3A362F` / `#CFC5B0` | Secondary text and lines |
 
 **Type.**
@@ -90,7 +91,7 @@ Checked at 320, 390, 768, 1024, 1280 and 1440 with no horizontal scroll.
 
 **Motif.** The can is the progress meter: large in the hero and small on the homeroom card. Rewards are torn-stub tickets, notes are marker scribbles, and short asides get a rubber stamp (“Official rules — good luck!”).
 
-**Effects** that would be unreadable as Tailwind arbitrary values are named utilities in `globals.css`: `ticket-mask`, `can-ribs`, `can-lid`, `hatch`, `progress-stripes` and `stub-label`. They are declared with `@utility`, so responsive variants like `lg:can-lid` work.
+**Effects** that would be unreadable as Tailwind arbitrary values are named utilities in `globals.css`: `ticket-mask`, `can-ribs`, `can-lid`, `progress-stripes` and `stub-label`. They are declared with `@utility`, so responsive variants like `lg:can-lid` work.
 
 ## Volunteer workspace
 
@@ -203,6 +204,31 @@ browser (SupabaseVolunteerRepository, fetch)
   - Browser: redirect when signed out, error that keeps the username, sign-in, the cookie is `HttpOnly`, sign out, and a tampered cookie is rejected.
   - curl: 401 from both API routes when signed out.
 
+## Collection map
+
+The `#map` section (`components/home/collection-map.tsx`) lets a student search for a street and see it on a Google map. That is all: the pick lives only in component state, and nothing is written anywhere. The future reservation form will read it from that state.
+
+- **Components:** the Maps JavaScript API's `PlaceAutocompleteElement` (Places API New, GA), `google.maps.Map` and `AdvancedMarkerElement`, all created in an effect. No npm package ships to the browser (`@types/google.maps` is types only). The Extended Component Library's `gmpx-place-picker` was not used: it's pre-1.0 and needs an extra package or script for the same result.
+- **Loading:** the client component adds the script once (`loadMaps()`), only when the section mounts, so only the homepage loads it. It uses `loading=async&callback=…` because `google.maps.importLibrary` exists only once Google calls the callback. `next/script`'s `onReady` fires at the load event, which is too early.
+- **What is allowed** (owner, 2026-09-30): any **whole street** in **Essex County, Ontario** (Windsor, Tecumseh, LaSalle, Amherstburg, Lakeshore, Leamington and so on), except highways and expressways. Searching is restricted with `includedRegionCodes: ['ca']`, `locationRestriction` (a rectangle around the county) and `includedPrimaryTypes: ['route']`. The rectangle overlaps Detroit and Google still suggests some house addresses, so **`checkCollectionStreet()`** (`lib/collection-area.ts`, unit-tested) decides after each pick:
+  - The place must be a `route` with country `CA`, province `ON`, and county "Essex County" (or locality "Windsor", which is administratively separate from the county).
+  - Highways are rejected by name (expressway, highway/hwy, Herb Gray Parkway), because Google types them as ordinary routes.
+  - A rejection clears the marker and shows a short message.
+- **Start view:** centred on Assumption College (`SCHOOL_LOCATION`) at zoom 12. `gestureHandling: "cooperative"` makes one-finger drags scroll the page on phones instead of trapping it. The map is 320px tall on mobile and 480px from `lg`.
+- **Fields fetched:** `types`, `addressComponents`, `location`, `viewport`. The display name isn't needed, because the street name comes from the `route` component.
+- **Map ID:** Advanced Markers need one. `NEXT_PUBLIC_GOOGLE_MAP_ID` (vector, from Maps Management) is used. In development only, it falls back to Google's `DEMO_MAP_ID`.
+- **Missing key or failure:** without a key (or, in production, a Map ID) the section renders a “not set up yet” message and loads nothing. A script error, an auth failure (`gm_authFailure`) or an init error shows “The map couldn't load”, and a failed search shows an inline message.
+
+### The API key is public, so it's restricted
+
+`NEXT_PUBLIC_GOOGLE_MAPS_API_KEY` is inlined into the browser bundle at build time, and it appears in every Maps request, which is how the Maps JavaScript API works. It is protected by restrictions in Google Cloud, not by secrecy (see `notes/13-public-browser-keys.md`). Apply these under **APIs & Services → Credentials → the key**:
+
+- **Application restriction: Websites.** Allow `http://localhost:3000/*`, `https://<production-domain>/*`, and `https://*-<vercel-team>.vercel.app/*` only if previews need the map.
+- **API restrictions: Restrict key** to **Maps JavaScript API** and **Places API (New)**, and enable both in the project.
+- **Quotas (optional):** a daily request cap on Places API (New) as a cost backstop.
+
+Set both variables in Vercel (Production and Preview). They are read at **build** time, so redeploy after changing them.
+
 ## Supabase connection
 
 | File | Key | RLS | Use |
@@ -236,7 +262,7 @@ students + donation_logs  --admin client (server only)-->  getHomepageData()
 - **Freshness:** `export const revalidate = 60` (ISR). The page is served from cache and rebuilt in the background at most once a minute, so a saved donation shows up within about a minute. If a rebuild fails (for example, Supabase is down), the last good page keeps being served. `next build` also queries Supabase, so the env vars must be set wherever the site is built.
 - **Why the admin client is acceptable here:** it bypasses RLS and this page has no login. That's safe only because the function returns public aggregates. Adding a field to its result is a publishing decision.
 
-Fixed copy that isn't data lives in `DRIVE` in `lib/site.ts`: the goal (20,000 can-equivalents), drive dates, desk location and hours, and organizer contact. `lib/demo-data.ts` now holds only the collection map's schematic zone grid, which is still undecided.
+Fixed copy that isn't data lives in `DRIVE` in `lib/site.ts`: the goal (20,000 can-equivalents), drive dates, desk location and hours, and organizer contact.
 
 Display helpers used by the client standings are in `lib/homepage.ts`: `homeroomStats` (dodgeball target, percentage, real cans/cash split, status), `matchesQuery` and `gradeLabel`. Move the reward maths into the single incentive-calculation module that `CLAUDE.md` requires once the rules are confirmed.
 
@@ -252,7 +278,7 @@ Both meters derive the fill, the count and the notes from `(goal, total)` in one
 - Every section has a heading, and there is one `h1`.
 - A visible focus ring on every focusable element (butter outline with an ink halo), as specified in the design.
 - Standings rows are buttons with `aria-pressed` and a full `aria-label` (room, grade, rank, total). The result count, empty state and desktop detail card are `aria-live="polite"`.
-- Zone cells are buttons with `aria-pressed` and labels like “Zone B2, open”. The school cell is `disabled`. The legend adds a hatch pattern, so taken vs. open doesn't depend on colour alone.
+- The street search is Google's combobox, named “Search for a street” with `aria-label` (its input is in a closed shadow root, so a `<label>` can't reach it). It works with Tab, typing, arrow keys and Enter. The chosen street, or the reason it was rejected, is announced from an `aria-live` panel.
 - The mobile menu button has `aria-expanded` and `aria-controls`, and Escape closes the menu.
 - Smooth anchor scrolling only applies under `prefers-reduced-motion: no-preference`.
 
@@ -264,7 +290,7 @@ Both meters derive the fill, the count and the notes from `(goal, total)` in one
 
 ## Deliberately not built yet
 
-- Reservations. Auth is a single admin login table (see Volunteer login).
+- Reservations: the map picks a street but saves nothing, and draws no segments or areas. Auth is a single admin login table (see Volunteer login).
 - The design-tool runtime (`support.js`).
 - Dark mode (see Visual system).
 
@@ -276,6 +302,7 @@ Both meters derive the fill, the count and the notes from `(goal, total)` in one
 | Desk days | Owner | The desk runs Oct 5–23, 7:30–8:10 a.m. It isn't confirmed whether that's every school day. |
 | Volunteer admins | Owner | Add the real admin logins in the SQL editor (see `CLAUDE.md`), and set `SESSION_SECRET` in Vercel before deploying. |
 | Log search/indexes and `updated_at` | Build | Logs are in `donation_logs`. `supabase/drafts/volunteer_workspace.sql` (indexes, `updated_at`, Postgres name search) is optional until volume or audit needs call for it. |
-| “Choose a collection area” flow | Owner + build | The link is `#`. The area model and booking rule are undecided, and the grid is a schematic placeholder. |
+| Street reservations | Owner + build | Students can pick a street, but nothing is saved. The booking rule (blocks a date or the street until then), what a reservation records and edit credentials are undecided (see the `street-reservations` skill). |
+| Google Cloud key settings | Owner | Apply the referrer and API restrictions in [Collection map](#collection-map), and set both `NEXT_PUBLIC_GOOGLE_*` variables in Vercel. |
 | Incentive details | Organizers | The rewards are confirmed. Still open, if the site should ever decide winners: daily cutoff times, ties, and how the dodgeball qualification order is recorded. |
 | Baseline migration history | Owner | `supabase/migrations/20260927000000_baseline_schema.sql` is already applied on the remote project but isn't recorded there. Run `pnpm exec supabase login`, then `link --project-ref gcrfsdmkcfywkofhijsi`, then `migration repair --status applied 20260927000000`. |

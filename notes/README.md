@@ -18,5 +18,6 @@ Suggested reading order:
 10. [Password login from scratch](10-password-login.md). Hashes vs encryption, salts, why bcrypt is slow, signed cookies (HMAC), and why stateless sessions are hard to revoke.
 11. [Derived totals and database error codes](11-derived-totals-and-error-codes.md). Why totals are summed from rows instead of stored, and how Postgres errors (unique, foreign key, check) become HTTP 409/400/502.
 12. [Public pages: send totals, not rows](12-public-aggregates.md). What a public page really publishes, aggregating at the server boundary, how totals can still leak, where to round money to cans, and how a cached page stays fresh.
+13. [Public browser keys: restricted, not hidden](13-public-browser-keys.md). Why a map key has to be visible in the browser, and how referrer, API and quota restrictions limit what a copied key can do.
 
 Never put real student names or donation records in these notes.
