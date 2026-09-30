@@ -1,27 +1,41 @@
 import "server-only";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { publicName } from "@/lib/homepage";
+import { loadRoster } from "@/lib/volunteer/roster.server";
+import { searchStudents } from "@/lib/volunteer/search";
 import {
   buildClaims,
-  matchStudent,
+  MAX_OPTIONS,
+  MIN_QUERY,
   toPublicClaim,
   type ClaimInput,
   type ClaimRow,
   type DeleteInput,
   type PublicClaim,
+  type StudentOption,
 } from "./claims";
+import { openStudentRef, sealStudentRef } from "./claims-ref";
 
 /**
  * Reads and writes `street_claims` for the public collection map.
  *
- * There is no login: the admin client bypasses RLS, so these functions are the
- * rules. Only PublicClaim leaves this module; student IDs and full surnames
- * stay here. Anyone who knows a classmate's name and homeroom can act in their
- * name (a known limit, see docs/architecture.md).
+ * There is no login and the admin client bypasses RLS, so these functions are
+ * the rules. Claims run on trust (owner, 2026-09-30): a student picks their
+ * own name, and nothing proves they are that student. Only PublicClaim and
+ * StudentOption leave this module: labels are "First L. (HR)" and students are
+ * named by sealed refs, never ids or surnames.
  */
 
 const CLAIM_COLUMNS = "place_id, address, lat, lng, students(first_name, last_name, hr)";
 /** PostgREST returns at most 1,000 rows per request by default. */
 const PAGE = 1000;
+
+function secret(): string {
+  const value = process.env.SESSION_SECRET;
+  // Fail closed: without a strong secret anyone could forge a student ref.
+  if (!value || value.length < 32) throw new Error("SESSION_SECRET must be set (32+ characters).");
+  return value;
+}
 
 export async function listClaims(): Promise<PublicClaim[]> {
   const db = createAdminClient();
@@ -38,17 +52,21 @@ export async function listClaims(): Promise<PublicClaim[]> {
   }
 }
 
-/** The one student with this full name in this homeroom, or null (none, or more than one). */
-async function findStudent(name: string, homeroom: string): Promise<number | null> {
-  // The homeroom comes from a <select> of the roster's own `hr` values. A
-  // homeroom is a few dozen students, so the name is matched in memory with the
-  // normalization the tests cover.
-  const { data, error } = await createAdminClient()
-    .from("students")
-    .select("student_id, first_name, last_name, hr")
-    .eq("hr", homeroom);
-  if (error) throw new Error(`Couldn't read students: ${error.message}`);
-  return matchStudent(data, name, homeroom)?.student_id ?? null;
+/**
+ * Name-picker suggestions: students whose name words start with the typed
+ * words (the volunteer desk's search), at most MAX_OPTIONS, labelled
+ * "First L. (HR)". Reads the roster (~1,100 rows) per search; the picker
+ * debounces, and that is cheap at one school's scale.
+ */
+export async function suggestStudents(query: string): Promise<StudentOption[]> {
+  if (query.replace(/\s/g, "").length < MIN_QUERY) return [];
+  const { exact } = searchStudents(await loadRoster(), query);
+  const key = secret();
+  return exact.slice(0, MAX_OPTIONS).map((s) => ({
+    ref: sealStudentRef(Number(s.id), key),
+    name: publicName(s),
+    homeroom: s.homeroom.trim(),
+  }));
 }
 
 async function readClaim(placeId: string) {
@@ -64,6 +82,7 @@ async function readClaim(placeId: string) {
 export type ClaimResult =
   | { status: "claimed"; claim: PublicClaim }
   | { status: "taken"; claim: PublicClaim }
+  | { status: "bad-ref" }
   | { status: "unknown-student" };
 
 /**
@@ -72,8 +91,8 @@ export type ClaimResult =
  * is still a success.
  */
 export async function createClaim(input: ClaimInput): Promise<ClaimResult> {
-  const studentId = await findStudent(input.name, input.homeroom);
-  if (studentId === null) return { status: "unknown-student" };
+  const studentId = openStudentRef(input.student, secret());
+  if (studentId === null) return { status: "bad-ref" };
 
   const db = createAdminClient();
   // Two tries: if the row that beat us is deleted before we can read it, the street is open again.
@@ -84,7 +103,7 @@ export async function createClaim(input: ClaimInput): Promise<ClaimResult> {
       .select(CLAIM_COLUMNS)
       .single();
     if (!error) return { status: "claimed", claim: toPublicClaim(data) };
-    // 23503: the student was removed between the lookup and the insert.
+    // 23503: the student was removed from the roster after the ref was issued.
     if (error.code === "23503") return { status: "unknown-student" };
     if (error.code !== "23505") throw new Error(`Couldn't save claim: ${error.message}`);
 
@@ -98,20 +117,18 @@ export async function createClaim(input: ClaimInput): Promise<ClaimResult> {
 
 /**
  * "deleted" also covers a claim that is already gone, so retries are safe.
- * "forbidden" means the claim exists and this name and homeroom aren't its
- * claimer (including an unknown student); the reason is not revealed.
+ * "forbidden": the claim exists and the picked student isn't its claimer.
  */
-export async function deleteClaim(input: DeleteInput): Promise<"deleted" | "forbidden"> {
-  const studentId = await findStudent(input.name, input.homeroom);
-  if (studentId !== null) {
-    const { data, error } = await createAdminClient()
-      .from("street_claims")
-      .delete()
-      .eq("place_id", input.placeId)
-      .eq("student_id", studentId)
-      .select("id");
-    if (error) throw new Error(`Couldn't delete claim: ${error.message}`);
-    if (data.length > 0) return "deleted";
-  }
+export async function deleteClaim(input: DeleteInput): Promise<"deleted" | "forbidden" | "bad-ref"> {
+  const studentId = openStudentRef(input.student, secret());
+  if (studentId === null) return "bad-ref";
+  const { data, error } = await createAdminClient()
+    .from("street_claims")
+    .delete()
+    .eq("place_id", input.placeId)
+    .eq("student_id", studentId)
+    .select("id");
+  if (error) throw new Error(`Couldn't delete claim: ${error.message}`);
+  if (data.length > 0) return "deleted";
   return (await readClaim(input.placeId)) ? "forbidden" : "deleted";
 }
