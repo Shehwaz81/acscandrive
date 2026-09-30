@@ -1,8 +1,8 @@
 /**
- * Street claims on the collection map: shared types, request parsing, student
- * matching and the pure function that turns private rows into the public list.
- * No I/O here, so the client can import the types and tests can use synthetic
- * rows. Database access lives in claims.server.ts.
+ * Street claims on the collection map: shared types, request parsing and the
+ * pure functions that turn private rows into public labels. No I/O here, so
+ * the client can import the types and tests can use synthetic rows. Database
+ * access lives in claims.server.ts.
  */
 
 import { ESSEX_COUNTY_BOUNDS } from "./collection-area";
@@ -11,42 +11,39 @@ import { publicName } from "./homepage";
 /** A claim as the public sees it. The claimer is "First L. (HR)", nothing else. */
 export type PublicClaim = { placeId: string; address: string; lat: number; lng: number; claimer: string };
 
-export type ClaimInput = { name: string; homeroom: string; placeId: string; address: string; lat: number; lng: number };
-export type DeleteInput = { name: string; homeroom: string; placeId: string };
+/** A name-picker suggestion: the public label and an opaque, server-sealed reference to the student. */
+export type StudentOption = { ref: string; label: string };
 
-export const NOT_FOUND_MESSAGE = "We couldn't find you. Check your name and homeroom, or ask at the desk.";
-export const NOT_YOURS_MESSAGE = "That name and homeroom don't match this claim.";
+export type ClaimInput = { student: string; placeId: string; address: string; lat: number; lng: number };
+export type DeleteInput = { student: string; placeId: string };
 
-/** The student columns a claim needs. No student_id, grade or teacher leaves the server. */
+/** Letters needed before the picker searches. */
+export const MIN_QUERY = 2;
+/** Suggestions per search; typing more of the name narrows it. */
+export const MAX_OPTIONS = 8;
+
+export const NOT_FOUND_MESSAGE = "We couldn't find you. Ask at the desk.";
+export const PICK_AGAIN_MESSAGE = "Pick your name from the list again.";
+export const NOT_YOURS_MESSAGE = "That name doesn't match this claim.";
+
+/** The student columns a claim label needs. No id, grade or teacher leaves the server. */
 export type ClaimerRow = { first_name: string; last_name: string; hr: string };
 export type ClaimRow = { place_id: string; address: string; lat: number; lng: number; students: ClaimerRow };
 
-// ---- Names ----
-
-/** Trimmed, case-insensitive, repeated spaces collapsed. */
-export function normalize(s: string): string {
-  return s.normalize("NFC").trim().replace(/\s+/g, " ").toLowerCase();
-}
-
-/**
- * The one student whose "first last" and homeroom match, or null. A name is
- * never unique on its own: two matches in the same homeroom are as unusable as
- * none, so both return null.
- */
-export function matchStudent<T extends ClaimerRow>(rows: T[], name: string, homeroom: string): T | null {
-  const n = normalize(name);
-  const hr = normalize(homeroom);
-  const hits = rows.filter((r) => normalize(r.hr) === hr && normalize(`${r.first_name} ${r.last_name}`) === n);
-  return hits.length === 1 ? hits[0] : null;
-}
-
 /** "Maya R. (10B)", like top donors plus the homeroom. */
-export function claimerLabel(s: ClaimerRow): string {
-  return `${publicName({ firstName: s.first_name, lastName: s.last_name })} (${s.hr.trim()})`;
+export function claimerLabel(s: { firstName: string; lastName: string; homeroom: string }): string {
+  return `${publicName(s)} (${s.homeroom.trim()})`;
 }
 
 export function toPublicClaim(r: ClaimRow): PublicClaim {
-  return { placeId: r.place_id, address: r.address, lat: r.lat, lng: r.lng, claimer: claimerLabel(r.students) };
+  const { first_name, last_name, hr } = r.students;
+  return {
+    placeId: r.place_id,
+    address: r.address,
+    lat: r.lat,
+    lng: r.lng,
+    claimer: claimerLabel({ firstName: first_name, lastName: last_name, homeroom: hr }),
+  };
 }
 
 /** The public list, sorted by street. Built field by field so nothing else can slip out. */
@@ -56,8 +53,7 @@ export function buildClaims(rows: ClaimRow[]): PublicClaim[] {
 
 // ---- Input boundary: request bodies are untrusted JSON. ----
 
-const MAX_NAME = 100;
-const MAX_HOMEROOM = 20;
+const MAX_REF = 200;
 const MAX_PLACE_ID = 300;
 const MAX_ADDRESS = 200;
 
@@ -85,10 +81,9 @@ function inArea(lat: unknown, lng: unknown): boolean {
 export function parseDeleteInput(body: unknown): DeleteInput | null {
   if (typeof body !== "object" || body === null) return null;
   const b = body as Record<string, unknown>;
-  const name = text(b.name, MAX_NAME);
-  const homeroom = text(b.homeroom, MAX_HOMEROOM);
+  const student = text(b.student, MAX_REF);
   const placeId = text(b.placeId, MAX_PLACE_ID);
-  return name && homeroom && placeId ? { name, homeroom, placeId } : null;
+  return student && placeId ? { student, placeId } : null;
 }
 
 export function parseClaimInput(body: unknown): ClaimInput | null {
