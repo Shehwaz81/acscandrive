@@ -127,8 +127,8 @@ export function Incentives() {
 
 function GroupHeading({ title, note }: { title: string; note: string }) {
   return (
-    <div className="flex items-baseline gap-2.5 border-b-2 border-ink pb-2 lg:gap-3 lg:pb-2.5">
-      <span className="font-display text-[26px] font-black uppercase lg:text-[30px]">{title}</span>
+    <div className="flex flex-wrap items-baseline gap-x-2.5 gap-y-0.5 border-b-2 border-ink pb-2 lg:gap-x-3 lg:pb-2.5">
+      <span className="font-display text-[26px] font-black whitespace-nowrap uppercase lg:text-[30px]">{title}</span>
       <span className="text-[13px] text-muted lg:text-sm">{note}</span>
     </div>
   );

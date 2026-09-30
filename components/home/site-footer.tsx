@@ -1,5 +1,5 @@
 import { SchoolLogo } from "@/components/marks";
-import { NAV_LINKS, VOLUNTEER_LOGIN_HREF, WRAP } from "@/lib/site";
+import { DRIVE, NAV_LINKS, VOLUNTEER_LOGIN_HREF, WRAP } from "@/lib/site";
 
 export function SiteFooter() {
   return (
@@ -15,8 +15,8 @@ export function SiteFooter() {
             </span>
             <span className="text-[12.5px] text-rule lg:text-sm">
               Assumption College Catholic Secondary School
-              <br className="hidden lg:block" />
-              <span className="lg:hidden"> · </span>Windsor, Ontario
+              <br />
+              Windsor, Ontario
             </span>
           </div>
         </div>
@@ -30,12 +30,16 @@ export function SiteFooter() {
             Volunteer login
           </a>
         </nav>
-        <div className="flex flex-col gap-6 text-sm text-rule lg:gap-2">
-          <span className="hidden font-semibold text-paper lg:block">Questions?</span>
-          <span className="border-[1.5px] border-dashed border-rule px-3 py-2.5 font-mono text-[12.5px] font-semibold lg:self-start lg:text-[13px]">
-            [ Organizer contact — TBC ]
+        <div className="flex flex-col gap-2 text-sm text-rule">
+          <span className="font-semibold text-paper">Questions?</span>
+          <span>
+            {DRIVE.contactName}
+            <br />
+            <a href={`mailto:${DRIVE.contactEmail}`} className="text-paper underline">
+              {DRIVE.contactEmail}
+            </a>
           </span>
-          <span className="text-xs lg:mt-3 lg:text-[12.5px]">
+          <span className="mt-4 text-xs lg:mt-3 lg:text-[12.5px]">
             Prototype — all totals are demo figures and reward rules are provisional.
           </span>
         </div>

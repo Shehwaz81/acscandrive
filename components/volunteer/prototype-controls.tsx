@@ -1,6 +1,7 @@
 "use client";
 
 import { useMockControls } from "@/lib/volunteer/provider";
+import { WRAP } from "@/lib/site";
 import { MONO_LABEL } from "@/lib/volunteer/ui";
 
 const BTN = "min-h-11 border-2 border-ink px-3 font-bold";
@@ -10,7 +11,7 @@ export function PrototypeControls() {
   const mock = useMockControls();
   if (!mock) return null;
   return (
-    <div className="mx-auto max-w-[1440px] px-4 pb-8 md:px-7 lg:px-8">
+    <div className={`${WRAP} pb-8`}>
       <section
         aria-label="Prototype controls"
         className="flex flex-wrap items-center gap-3 border-2 border-dashed border-muted px-4 py-3 text-[13px] text-muted"

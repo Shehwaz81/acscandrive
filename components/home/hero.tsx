@@ -81,22 +81,22 @@ function CompactMeter({ goal, total, p }: MeterProps) {
     <div
       role="img"
       aria-label={p.label}
-      className="relative flex items-stretch gap-[18px] border-y-2 border-ink py-4 md:max-w-[520px] xl:hidden"
+      className="relative flex items-stretch gap-[18px] border-y-2 border-ink py-4 md:gap-7 md:py-5 xl:hidden"
     >
-      <Can variant="meter" fill={p.fill} ribs className="h-[122px] w-[84px]" />
+      <Can variant="meter" fill={p.fill} ribs className="h-[122px] w-[84px] md:h-[168px] md:w-[116px]" />
       <div className="flex flex-1 flex-col justify-between gap-2">
         <div className="flex items-baseline gap-2 border-b-2 border-dashed border-ink pt-1 pb-1.5">
           <span className="font-mono text-[10.5px] font-bold tracking-[.12em]">GOAL</span>
           <span className="font-display text-[26px] leading-none font-black">{fmt(goal)} cans</span>
         </div>
         <div className="flex flex-col gap-0.5">
-          <span className="font-display text-[54px] leading-[.9] font-black">{fmt(total)}</span>
+          <span className="font-display text-[54px] leading-[.9] font-black md:text-[72px]">{fmt(total)}</span>
           <span className="text-[13.5px] font-semibold">
             can-equivalents collected
             <span className="block font-normal text-muted">cans + cash, $1 = 1 can</span>
           </span>
         </div>
-        <span className="origin-left -rotate-3 font-marker text-[17px] leading-[1.1] text-error">
+        <span className="origin-left -rotate-3 font-marker text-[17px] leading-[1.1] text-error md:text-xl">
           {p.progressNote} {!p.reached && "— "}
           {p.toGoNote}
         </span>
