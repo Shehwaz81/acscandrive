@@ -21,10 +21,23 @@ export interface GradeDayTotal {
   cans: number;
   /** Integer cents ≥ 0. */
   cashCents: number;
+  /**
+   * Can-equivalents: each student's day rounded down ($1 = 1 can), then
+   * summed. Not recomputable from cans + cashCents, which would round once.
+   */
+  total: number;
 }
 
 export interface GradeDayResult {
   day: CollectionDay;
   /** Always exactly four entries, one per grade (zeros when a grade gave nothing). */
   totals: GradeDayTotal[];
+}
+
+/** Everything Grade Wars shows, computed on the server by `buildGradeWars()`. */
+export interface GradeWarsData {
+  /** Ascending, at most five. Empty before the drive starts. */
+  days: CollectionDay[];
+  /** One per day, same order. */
+  results: GradeDayResult[];
 }
