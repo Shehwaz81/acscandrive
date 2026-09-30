@@ -28,7 +28,7 @@
 - Design tokens (colours and fonts) are defined once in `app/globals.css` under `@theme`. Use the token classes (`bg-ink`, `text-tomato`, `font-display`) instead of raw hex values. Multi-stop effects are named `@utility` classes in the same file.
 - The homepage is one responsive component tree, not separate mobile and desktop pages. Base styles follow the 390 design, `lg` is the desktop header and type, and `xl` is the side-by-side section layouts.
 - Components are server components by default. On the homepage only interactive sections (`site-header`, `standings`, `zone-map`) are client components; the volunteer workspace UI (`components/volunteer/`) is client-side and gets data only through the hooks in `lib/volunteer/provider.tsx`, never by importing a repository implementation. Keep shared constants in `lib/`, not in `"use client"` modules.
-- All homepage figures come from `lib/demo-data.ts`. Replace it with aggregate-only server queries that return the same shapes; do not send private rows to client components.
+- All homepage figures come from `getHomepageData()` (`lib/homepage.server.ts`), called once in `app/page.tsx`. To go live, change only its body to aggregate-only queries returning the same shapes; its result reaches the browser, so no private rows or student IDs. Fixed drive details (dates, desk, contact) live in `DRIVE` in `lib/site.ts`.
 
 ## Donation workflow and user experience
 

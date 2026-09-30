@@ -27,7 +27,7 @@ The homepage is a port of the claude.ai/design file **Can Drive Homepage.dc.html
 ```
 app/
   layout.tsx          fonts, metadata, <html lang="en-CA">
-  page.tsx            homepage: skip link + header + sections + footer (static)
+  page.tsx            homepage: calls getHomepageData() once, passes props to the sections (static)
   globals.css         design tokens, base styles, effect utilities
   docs/page.tsx       renders docs/architecture.md
 components/
@@ -36,8 +36,9 @@ components/
   marks.tsx           marker underline, rubber stamp, school crest (public/acslogo.png)
   home/               one file per homepage section
 lib/
-  demo-data.ts        every number on the homepage + pure helpers
-  site.ts             nav links, content-width class
+  homepage.server.ts  getHomepageData(): the only source of homepage figures (demo values for now)
+  demo-data.ts        the demo values + pure helpers (fmt, homeroomStats, matchesQuery)
+  site.ts             nav links, content-width class, fixed drive details (DRIVE)
 docs/
   architecture.md     this file
 ```
@@ -216,18 +217,27 @@ browser (SupabaseVolunteerRepository, fetch)
 
 ## Data boundary
 
-Every figure on the homepage comes from **`lib/demo-data.ts`**. It holds the goal, school total, 16 homerooms, the fictional top donors and the zone grid, plus pure helpers:
+Every figure on the homepage comes from **`getHomepageData()`** in `lib/homepage.server.ts`. `app/page.tsx` calls it once and passes plain props down; no section imports data itself. It is `server-only`, and today it returns the demo constants from `lib/demo-data.ts` (goal, school total, 16 homerooms, fictional top donors). The zone grid is still read straight from `demo-data.ts` by the collection map, which is undecided.
+
+Fixed copy that isn't data (drive dates, desk location and hours, organizer contact) lives in `DRIVE` in `lib/site.ts`.
+
+`lib/demo-data.ts` also holds pure helpers used by the client standings:
 
 - `homeroomStats` computes the dodgeball target, percentage, split and status.
 - `matchesQuery` implements the standings search rule: `grade 9` or `g9` matches a grade, a bare number matches a grade, and anything else matches part of the homeroom code.
 
-When the database exists, the plan is:
+To connect the database, change only the body of `getHomepageData()`:
 
-1. Replace the constants with **aggregate-only** server queries: school total, homeroom totals and daily top donors. These should come from a view or RPC that exposes only the fields the page shows.
-2. Keep the page a server component that fetches those aggregates and passes plain props to the client components. **No private student rows should reach the browser.**
+1. Return **aggregates only**: school total, homeroom totals with student counts, and today's (America/Toronto) top donors as display name, homeroom and total. Compute them from `donation_logs` with `canEquivalents()` (sum the cans and the cents, then convert once), never from a stored total. A view or RPC that exposes only these fields keeps the rule in the database too.
+2. Whatever the function returns is serialised into the page and reaches the browser, because `Standings` is a client component. **No student IDs or private rows.**
+3. The page is static today. Once the data is live, give the route a revalidation window (or make it dynamic) so totals don't freeze at build time.
 3. Move the reward maths (targets, can-equivalents, top-3 ties) into the single incentive-calculation module that `CLAUDE.md` requires. Do that only once the rules are confirmed.
 
-The cash split (`~27%`) and the “$1 = 1 can” wording are demo placeholders. Nothing on the page is a confirmed rule, which is why the page is stamped “Preview rules — awaiting confirmation”.
+**$1 = 1 can is confirmed.** The hero labels its total “can-equivalents (cans + cash)”. The podium and runners-up say “cans” for the same can-equivalent figures, by the owner's choice, because it reads more cleanly. The cash split (`~27%`) is a demo placeholder. The reward rules are still unconfirmed, which is why the incentives are stamped “Preview rules — awaiting confirmation”.
+
+### Hero meter
+
+Both meters derive the fill, the count and the notes from `(goal, total)` in one place (`progress()` in `hero.tsx`). The percentage is floored, so it never shows 100% while cans are still to go. The fill caps at the rim, and past the goal the notes read “Goal reached! +N over”. On desktop the can's inner box and the tick column are both 300px, so the fill maps 1:1 to the scale, and a pointer sits exactly on the fill line. Each meter is `role="img"` with a full `aria-label`.
 
 ## Accessibility
 
@@ -255,7 +265,8 @@ The cash split (`~27%`) and the “$1 = 1 can” wording are demo placeholders. 
 
 | Item | Needed from | Notes |
 | --- | --- | --- |
-| Branding | Owner | The Assumption College crest is in the header and footer. The tomato/butter palette is still not the school's colours. |
+| Branding | Owner | Decided: keep the tomato/butter palette. The Assumption College crest is in the header and footer. |
+| Desk days | Owner | The desk runs Oct 5–23, 7:30–8:10 a.m. It isn't confirmed whether that's every school day. |
 | Volunteer admins | Owner | Add the real admin logins in the SQL editor (see `CLAUDE.md`), and set `SESSION_SECRET` in Vercel before deploying. |
 | Log search/indexes and `updated_at` | Build | Logs are in `donation_logs`. `supabase/drafts/volunteer_workspace.sql` (indexes, `updated_at`, Postgres name search) is optional until volume or audit needs call for it. |
 | “Choose a collection area” flow | Owner + build | The link is `#`. The area model and booking rule are undecided, and the grid is a schematic placeholder. |
