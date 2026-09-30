@@ -8,12 +8,13 @@ import type { DonationLog, Method } from "@/lib/volunteer/types";
 import { BTN_PRIMARY, BTN_SECONDARY, MONO_LABEL, SPINNER } from "@/lib/volunteer/ui";
 import { amountToInput, isLargeAmount, parseAmount } from "@/lib/volunteer/validation";
 import { AmountInput } from "./amount-input";
+import { DELETE_TRIGGER, DeleteLogConfirm } from "./delete-log-confirm";
 import { FieldError } from "./field-error";
 import { focusQuietly } from "./use-hotkeys";
 import { MethodTag } from "./method-tag";
 
 export const ROW_GRID =
-  "grid grid-cols-[minmax(0,1fr)_auto_auto] gap-x-3 [grid-template-areas:'amount_method_edit'_'date_date_date'] md:grid-cols-[minmax(0,1.3fr)_minmax(0,1fr)_minmax(0,1fr)_80px] md:[grid-template-areas:'date_method_amount_edit']";
+  "grid grid-cols-[minmax(0,1fr)_auto_auto] gap-x-3 [grid-template-areas:'amount_method_edit'_'date_date_date'] md:grid-cols-[minmax(0,1.3fr)_minmax(0,1fr)_minmax(0,1fr)_148px] md:[grid-template-areas:'date_method_amount_edit']";
 
 type Props = {
   log: DonationLog;
@@ -24,12 +25,19 @@ type Props = {
   onEdit: () => void;
   onClose: () => void;
   onSaved: (before: DonationLog, after: DonationLog) => void;
+  onDeleted: (log: DonationLog) => void;
 };
 
-/** One log: a read-only row, or (while editing) an inline editor panel. */
+/** One log: a read-only row (with an inline delete confirm), or (while editing) an inline editor panel. */
 export function LogRow(props: Props) {
-  const { log, editing, editDisabled, updated, editButtonRef, onEdit } = props;
-  if (editing) return <LogEditor {...props} />;
+  if (props.editing) return <LogEditor {...props} />;
+  return <LogView {...props} />;
+}
+
+function LogView({ log, editDisabled, updated, editButtonRef, onEdit, onDeleted }: Props) {
+  const [confirming, setConfirming] = useState(false);
+  const deleteRef = useRef<HTMLButtonElement>(null);
+  const what = `log from ${formatDayTime(log.createdAt)}, ${formatAmount(logAmount(log))}`;
   return (
     <div
       role="row"
@@ -56,18 +64,42 @@ export function LogRow(props: Props) {
           <span className={`${MONO_LABEL} bg-ink px-1.5 py-0.5 text-[10.5px] text-butter`}>Updated</span>
         )}
       </div>
-      <div role="cell" className="flex justify-end [grid-area:edit]">
+      <div role="cell" className="flex justify-end gap-1 [grid-area:edit]">
         <button
           ref={editButtonRef}
           type="button"
           onClick={onEdit}
-          disabled={editDisabled}
-          aria-label={`Edit log from ${formatDayTime(log.createdAt)}, ${formatAmount(logAmount(log))}`}
+          disabled={editDisabled || confirming}
+          aria-label={`Edit ${what}`}
           className={BTN_SECONDARY}
         >
           Edit
         </button>
+        <button
+          ref={deleteRef}
+          type="button"
+          onClick={() => setConfirming(true)}
+          disabled={editDisabled}
+          aria-expanded={confirming}
+          aria-label={`Delete ${what}`}
+          className={DELETE_TRIGGER}
+        >
+          Delete
+        </button>
       </div>
+      {confirming && (
+        <div role="cell" className="col-span-full flex justify-end pt-2 pb-1">
+          <DeleteLogConfirm
+            logId={log.id}
+            description={what}
+            onCancel={() => {
+              setConfirming(false);
+              focusQuietly(deleteRef.current);
+            }}
+            onDeleted={() => onDeleted(log)}
+          />
+        </div>
+      )}
     </div>
   );
 }

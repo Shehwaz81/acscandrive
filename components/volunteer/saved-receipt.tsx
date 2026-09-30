@@ -1,15 +1,17 @@
 "use client";
 
 import Link from "next/link";
-import type { Ref } from "react";
+import { useRef, useState, type Ref } from "react";
 import { Ticket } from "@/components/ticket";
 import { formatAmount, logAmount } from "@/lib/volunteer/money";
 import { fullName } from "@/lib/volunteer/search";
 import { formatTime } from "@/lib/volunteer/time";
 import type { DonationLog, Student } from "@/lib/volunteer/types";
 import { BTN_PRIMARY, BTN_SECONDARY, KBD, MONO_LABEL } from "@/lib/volunteer/ui";
+import { DELETE_TRIGGER, DeleteLogConfirm } from "./delete-log-confirm";
+import { focusQuietly } from "./use-hotkeys";
 
-/** Shown only after the write is confirmed. */
+/** Shown only after the write is confirmed. Deleting the log starts a fresh entry for the same student. */
 export function SavedReceipt({
   log,
   student,
@@ -25,6 +27,8 @@ export function SavedReceipt({
   onNext: () => void;
   onAnother: () => void;
 }) {
+  const [confirming, setConfirming] = useState(false);
+  const deleteRef = useRef<HTMLButtonElement>(null);
   return (
     <div>
       <div role="status">
@@ -65,7 +69,28 @@ export function SavedReceipt({
         >
           Wrong amount? Edit this log
         </Link>
+        <button
+          ref={deleteRef}
+          type="button"
+          onClick={() => setConfirming(true)}
+          aria-expanded={confirming}
+          className={DELETE_TRIGGER}
+        >
+          Delete this log
+        </button>
       </div>
+      {confirming && (
+        <DeleteLogConfirm
+          logId={log.id}
+          description={`${formatAmount(logAmount(log))} for ${fullName(student)}`}
+          className="mt-4"
+          onCancel={() => {
+            setConfirming(false);
+            focusQuietly(deleteRef.current);
+          }}
+          onDeleted={onAnother}
+        />
+      )}
       {demo && <p className="mt-4 text-[13px] text-muted">Demo only — not sent to a database.</p>}
     </div>
   );
