@@ -83,8 +83,7 @@ export function Breakdown({ board, date }: { board: Board; date: string | null }
         </span>
       </div>
       <p className="mt-3 text-[13px] leading-normal text-body">
-        Cans count one-for-one; cash counts $1 = 1 can-equivalent. Any daily recognition for the top grade is still
-        being confirmed.
+        Any daily recognition for the top grade is still being confirmed.
       </p>
     </div>
   );

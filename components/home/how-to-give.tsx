@@ -55,26 +55,22 @@ export function HowToGive() {
           </ol>
 
           {/* Same columns as the steps above, so the boxes line up with them. */}
-          <div className="grid gap-2.5 lg:grid-cols-3 lg:gap-9">
-            <InfoBox label="Where" value={DRIVE.deskLocation} note="Look for the volunteer desk" />
-            <InfoBox label="When" value={DRIVE.shortDates} note={`Desk open ${DRIVE.deskHours}`} />
-            <p className="border-t-2 border-ink pt-3 text-[13.5px] leading-normal text-body lg:pt-3.5 lg:text-sm">
-              <b className="text-ink">Cans vs. cash:</b> every can counts as one, and every $1 counts as one
-              can. Online payments aren’t available yet, so bring it in person.
-            </p>
-          </div>
+          <dl className="grid gap-2.5 lg:grid-cols-3 lg:gap-9">
+            <InfoBox label="Where" value={DRIVE.deskLocation} />
+            <InfoBox label="When" value={DRIVE.shortDates} />
+            <InfoBox label="Desk hours" value={DRIVE.deskHours} />
+          </dl>
         </div>
       </div>
     </section>
   );
 }
 
-function InfoBox({ label, value, note }: { label: string; value: string; note: string }) {
+function InfoBox({ label, value }: { label: string; value: string }) {
   return (
     <div className="flex flex-col gap-1 border-2 border-ink bg-paper px-3.5 py-3 lg:px-[18px] lg:py-4">
-      <span className="font-mono text-[11px] font-bold tracking-[.12em] text-muted uppercase">{label}</span>
-      <span className="font-display text-[22px] leading-[1.05] font-extrabold uppercase lg:text-2xl">{value}</span>
-      <span className="text-[13.5px] text-body lg:text-sm">{note}</span>
+      <dt className="font-mono text-[11px] font-bold tracking-[.12em] text-muted uppercase">{label}</dt>
+      <dd className="font-display text-[22px] leading-[1.05] font-extrabold uppercase lg:text-2xl">{value}</dd>
     </div>
   );
 }
