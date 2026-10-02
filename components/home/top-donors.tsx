@@ -83,10 +83,10 @@ export function TopDonors({ donors }: { donors: Donor[] }) {
             ))}
           </ol>
           <a
-            href="#standings"
+            href="/students"
             className="flex h-[52px] items-center justify-center gap-3 border-2 border-ink px-5 text-[15px] font-bold no-underline hover:bg-ink hover:text-paper md:self-start lg:h-auto lg:py-3"
           >
-            See homeroom standings <span aria-hidden>→</span>
+            All student standings <span aria-hidden>→</span>
           </a>
         </div>
       </div>

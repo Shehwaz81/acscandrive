@@ -1,7 +1,8 @@
 import { SchoolLogo } from "@/components/marks";
-import { DRIVE, NAV_LINKS, VOLUNTEER_LOGIN_HREF, WRAP } from "@/lib/site";
+import { DRIVE, NAV_LINKS, navHref, VOLUNTEER_LOGIN_HREF, WRAP } from "@/lib/site";
 
-export function SiteFooter() {
+/** `linkBase` is "/" when rendered off the homepage, as in SiteHeader. */
+export function SiteFooter({ linkBase = "" }: { linkBase?: string } = {}) {
   return (
     <footer className="bg-ink text-paper">
       <div
@@ -22,7 +23,7 @@ export function SiteFooter() {
         </div>
         <nav aria-label="Footer" className="grid grid-cols-2 gap-x-4 text-[15px] lg:flex lg:flex-col lg:gap-1">
           {NAV_LINKS.map((l) => (
-            <a key={l.href} href={l.href} className="py-2.5 lg:py-1.5">
+            <a key={l.href} href={navHref(l.href, linkBase)} className="py-2.5 lg:py-1.5">
               {l.label}
             </a>
           ))}

@@ -3,12 +3,21 @@
 /** Centred 1440px content column with the design's 20px / 64px gutters. */
 export const WRAP = "mx-auto w-full max-w-[1440px] px-5 lg:px-16";
 
+/** "#…" entries are homepage sections; "/…" entries are pages of their own. */
 export const NAV_LINKS = [
   { href: "#incentives", label: "Incentives" },
   { href: "#standings", label: "Standings" },
+  { href: "/students", label: "Students" },
   { href: "#grade-wars", label: "Grade Wars" },
   { href: "#map", label: "Collection map" },
 ];
+
+/**
+ * A nav link as seen from a page. Only section links take the prefix ("/" off
+ * the homepage): prefixing a page link would give "//students", which a
+ * browser reads as another host.
+ */
+export const navHref = (href: string, linkBase = "") => (href.startsWith("#") ? linkBase + href : href);
 
 export const VOLUNTEER_LOGIN_HREF = "/volunteer";
 

@@ -97,6 +97,40 @@
   background: repeating-linear-gradient(135deg, var(--color-tomato) 0 8px, var(--color-tomato-dark) 8px 12px);
 }
 
+/* Student Standings: the class progress bar and the shelf tags' barcode. */
+@utility butter-stripes {
+  background: repeating-linear-gradient(135deg, var(--color-butter) 0 8px, #e0b020 8px 12px);
+}
+
+@utility barcode {
+  background: repeating-linear-gradient(90deg, currentColor 0 1px, transparent 1px 3px, currentColor 3px 5px, transparent 5px 6px);
+}
+
+/* Student view: slides in from the right, and out again when closing. */
+@utility drawer-in {
+  @media (prefers-reduced-motion: no-preference) {
+    animation: drawer-in 260ms cubic-bezier(0.2, 0.8, 0.2, 1);
+  }
+}
+
+@utility drawer-out {
+  @media (prefers-reduced-motion: no-preference) {
+    animation: drawer-out 200ms ease-in forwards;
+  }
+}
+
+@keyframes drawer-in {
+  from {
+    transform: translateX(100%);
+  }
+}
+
+@keyframes drawer-out {
+  to {
+    transform: translateX(100%);
+  }
+}
+
 @utility stub-label {
   writing-mode: vertical-rl;
   transform: rotate(180deg);

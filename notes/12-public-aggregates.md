@@ -31,6 +31,18 @@ A total is not automatically anonymous:
 - **Differences over time.** A total that jumps by 40 right after someone was seen at the desk tells you what they gave.
 - **Named lists are a disclosure by design.** "Top donors" publishes names and amounts on purpose, so it needs the organizer's decision on how names appear (for example, first name + initial) and whether students can opt out.
 
+## When the decision is to publish individuals
+
+Sometimes the point of a page *is* the individual: a leaderboard with names, or "look up my total". That isn't a leak, as long as someone with the authority to decide has decided it, and the page then publishes exactly what was approved and nothing else. The boundary idea doesn't change, only what crosses it:
+
+- **Write down the public shape.** List the fields that may leave (name, grade, total, each donation's date, method and amount) as a type, and build every response from that type. Anything not in it stays behind: internal ids, who recorded an entry, bookkeeping timestamps.
+- **Never hand out the database's own id.** A public page still needs a way to say "this student". Give the browser an opaque token instead: the id encrypted and signed by the server. The browser can hand it back, but can't read it, guess the next one or make one up. Here the token is the same every time for one student, so a shared link keeps working. That is fine because the name is shown right beside it anyway; where the name is hidden (the claim picker), tokens are random each time so they can't be compared.
+- **Fetch on demand, not in bulk.** The page itself carries only the top of the rankings. A search returns a handful of matches, and a profile returns one student. The full roster and every history never travel in one response. This doesn't make them secret (anyone patient can search name by name), but it keeps each response small and makes bulk copying a deliberate act.
+- **A public lookup can be enumerated.** Requiring two letters and capping results slows a casual copy; it doesn't stop a script. If that matters, the fixes are a rate limit or a login, and choosing neither is a decision to record, not an oversight.
+- **One exception, clearly fenced.** Publishing names on one page doesn't change the others. Each page keeps its own boundary function, so widening one doesn't quietly widen the rest.
+
+In this app the owner approved exactly this for the Student Standings page: full names, totals, reward progress and donation history are public there, while the homepage still shows "First L.".
+
 For a school can drive, these risks are small and accepted. But they are real choices, not side effects. In this app, the owner chose to show every homeroom, including 1-student ones, and to show top donors as first name + last initial. Grade Wars' daily per-grade totals aren't suppressed either, even on a day when one student is a grade's only donor: rare, and less than the top donors list already shows.
 
 ## One source for every figure

@@ -2,7 +2,7 @@
 
 import { useEffect, useState, type ReactNode } from "react";
 import { SchoolLogo } from "@/components/marks";
-import { NAV_LINKS, VOLUNTEER_LOGIN_HREF } from "@/lib/site";
+import { NAV_LINKS, navHref, VOLUNTEER_LOGIN_HREF } from "@/lib/site";
 
 /** Nav breakpoint: the homepage collapses below lg; the volunteer desk keeps nav on tablets. */
 const NAV_FROM = {
@@ -13,6 +13,7 @@ const NAV_FROM = {
 export function SiteHeader({
   linkBase = "",
   homeHref = "#top",
+  current,
   aside,
   menuAside,
   navFrom = "lg",
@@ -20,6 +21,8 @@ export function SiteHeader({
   /** Prefix for the section links, e.g. "/" when rendered off the homepage. */
   linkBase?: string;
   homeHref?: string;
+  /** The page link this header is on, e.g. "/students"; marked aria-current. */
+  current?: string;
   /** Replaces the "Volunteer login" link at the right. */
   aside?: ReactNode;
   /** Replaces the "Volunteer login" link at the bottom of the phone menu. */
@@ -53,7 +56,12 @@ export function SiteHeader({
 
         <nav aria-label="Main" className={`ml-auto hidden gap-1.5 ${bp.nav}`}>
           {NAV_LINKS.map((l) => (
-            <a key={l.href} href={linkBase + l.href} className="px-4 py-3 text-[15px] font-semibold no-underline">
+            <a
+              key={l.href}
+              href={navHref(l.href, linkBase)}
+              aria-current={l.href === current ? "page" : undefined}
+              className="border-b-4 border-transparent px-4 pt-3 pb-2 text-[15px] font-semibold whitespace-nowrap no-underline aria-[current]:border-tomato"
+            >
               {l.label}
             </a>
           ))}
@@ -62,7 +70,7 @@ export function SiteHeader({
           {aside ?? (
             <a
               href={VOLUNTEER_LOGIN_HREF}
-              className="block border-l border-rule py-3 pl-7 text-[13px] text-muted"
+              className="block border-l border-rule py-3 pl-7 text-[13px] whitespace-nowrap text-muted"
             >
               Volunteer login
             </a>
@@ -89,9 +97,10 @@ export function SiteHeader({
           {NAV_LINKS.map((l) => (
             <a
               key={l.href}
-              href={linkBase + l.href}
+              href={navHref(l.href, linkBase)}
+              aria-current={l.href === current ? "page" : undefined}
               onClick={() => setMenuOpen(false)}
-              className="border-b border-paper/20 py-3.5 font-display text-[34px] leading-none font-black uppercase no-underline"
+              className="border-b border-paper/20 py-3.5 font-display text-[34px] leading-none font-black uppercase no-underline aria-[current]:text-butter"
             >
               {l.label}
             </a>
