@@ -127,7 +127,7 @@ export function TodayShelf({
           <div className="relative xl:col-start-2 xl:row-span-2 xl:row-start-1">
             <ol className="grid grid-cols-2 lg:grid-cols-[1fr_1.15fr_1fr] lg:pt-16">
               {PLACES.map((p, i) => (
-                <Spot key={p.suffix} place={i + 1} entry={podium[i]} note={i === 0 ? note : null} onOpen={onOpen} />
+                <Spot key={p.suffix} place={i + 1} entry={podium[i]} known={page.kind === "ready"} note={i === 0 ? note : null} onOpen={onOpen} />
               ))}
             </ol>
             {state !== "live" && (
@@ -175,11 +175,14 @@ export function TodayShelf({
 function Spot({
   place,
   entry,
+  known,
   note,
   onOpen,
 }: {
   place: number;
   entry: TodayEntry | undefined;
+  /** False while loading or failed: the outline then claims nothing about the spot. */
+  known: boolean;
   note: string | null;
   onOpen: OpenStudent;
 }) {
@@ -214,7 +217,7 @@ function Spot({
         ) : (
           <div className={`relative flex-none ${p.can}`}>
             <div className="absolute inset-x-0 inset-y-[9px] flex items-end justify-center rounded-[10px] border-[3px] border-dashed border-dot pb-6 lg:inset-y-3 lg:rounded-[14px]">
-              <span className="font-display text-xl font-extrabold text-muted uppercase lg:text-2xl">Open spot</span>
+              {known && <span className="font-display text-xl font-extrabold text-muted uppercase lg:text-2xl">Open spot</span>}
             </div>
           </div>
         )}
@@ -226,14 +229,14 @@ function Spot({
       </div>
       <div aria-hidden className="h-4 bg-ink" />
       <div className={`flex h-[90px] items-start border-b-[3px] border-ink bg-kraft lg:h-24 ${p.align} ${p.ledge}`}>
-        <ShelfTag place={place} entry={entry} />
+        <ShelfTag place={place} entry={entry} known={known} />
       </div>
     </li>
   );
 }
 
 /** The grocery shelf tag under a can: today's total, labelled "cans" like the homepage. */
-function ShelfTag({ place, entry }: { place: number; entry: TodayEntry | undefined }) {
+function ShelfTag({ place, entry, known }: { place: number; entry: TodayEntry | undefined; known: boolean }) {
   const p = PLACES[place - 1];
   return (
     <div
@@ -255,10 +258,12 @@ function ShelfTag({ place, entry }: { place: number; entry: TodayEntry | undefin
           </span>
         </div>
       ) : (
-        <div className="flex items-baseline gap-2">
-          <span aria-hidden className="font-display text-[42px] leading-[.85] font-black lg:text-[52px]">—</span>
-          <span className="text-[13px] font-semibold">No one yet</span>
-        </div>
+        known && (
+          <div className="flex items-baseline gap-2">
+            <span aria-hidden className="font-display text-[42px] leading-[.85] font-black lg:text-[52px]">—</span>
+            <span className="text-[13px] font-semibold">No one yet</span>
+          </div>
+        )
       )}
     </div>
   );

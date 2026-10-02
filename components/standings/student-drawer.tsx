@@ -170,9 +170,7 @@ function Profile({ profile, titleId }: { profile: StudentProfile; titleId: strin
     <>
       <header className="flex flex-col gap-3">
         <h2 id={titleId} className="font-display text-[58px] leading-[.82] font-black break-words uppercase lg:text-[80px]">
-          {student.firstName}
-          <br />
-          {student.lastName}
+          <span className="block">{student.firstName}</span> <span className="block">{student.lastName}</span>
         </h2>
         <p className="text-[15px] lg:text-base">
           Grade {student.grade} · Homeroom {student.homeroom} · {student.teacher}
@@ -251,7 +249,7 @@ function DressDown({ progress }: { progress: DressDownProgress }) {
       <h3 id="dress-down-title" className="font-display text-[28px] leading-none font-extrabold uppercase">
         Dress-down day
       </h3>
-      <Ticket stub={progress.phase === "ended" ? "LAST WEEK" : "THIS WEEK"} className="bg-butter text-ink">
+      <Ticket stub={progress.phase === "ended" ? "FINAL WEEK" : "THIS WEEK"} className="bg-butter text-ink">
         <div className="flex flex-col gap-3 px-4 py-5 lg:px-6">
           <div className="flex flex-wrap items-center justify-between gap-2">
             <span className={`${EYEBROW} text-body`}>{windowLabel(w)}</span>
