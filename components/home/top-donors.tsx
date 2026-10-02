@@ -55,7 +55,7 @@ export function TopDonors({ donors }: { donors: Donor[] }) {
       >
         <div className="flex flex-col gap-[18px] lg:gap-[22px]">
           <span className="font-mono text-[11px] font-semibold tracking-[.14em] text-muted lg:text-xs">
-            STUDENT TABLE · TODAY
+            STUDENT TABLE
           </span>
           <h2
             id="donors-title"
@@ -65,7 +65,7 @@ export function TopDonors({ donors }: { donors: Donor[] }) {
             <MarkerUnderline strokeClassName="bottom-0 h-[13px] lg:h-[18px]">today</MarkerUnderline>
           </h2>
           <p className="max-w-[420px] text-[15.5px] leading-normal text-pretty lg:text-[17px]">
-            The day’s top three each earn a lunch voucher. New day, new podium — anyone can get up there.
+            New day, new podium — anyone can get up there.
           </p>
         </div>
 
@@ -88,9 +88,6 @@ export function TopDonors({ donors }: { donors: Donor[] }) {
           >
             See homeroom standings <span aria-hidden>→</span>
           </a>
-          <span className="font-mono text-[11px] leading-normal font-semibold text-muted lg:text-xs">
-            Names show as first name + last initial. Cash counts as $1 = 1 can. Resets at midnight.
-          </span>
         </div>
       </div>
     </section>

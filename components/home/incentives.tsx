@@ -1,4 +1,3 @@
-import { Stamp } from "@/components/marks";
 import { Ticket } from "@/components/ticket";
 import { WRAP } from "@/lib/site";
 
@@ -10,24 +9,13 @@ export function Incentives() {
       aria-labelledby="incentives-title"
       className="scroll-mt-4 border-t-2 border-ink bg-kraft"
     >
-      <div className={`${WRAP} flex flex-col gap-[22px] pt-10 pb-12 lg:gap-14 lg:pt-20 lg:pb-24`}>
-        <div className="flex flex-col gap-[22px] lg:grid lg:grid-cols-[minmax(0,7fr)_minmax(0,5fr)] lg:items-end lg:gap-12">
-          <h2
-            id="incentives-title"
-            className="font-display text-[clamp(3.5rem,18vw,4.5rem)] leading-[.84] font-black uppercase lg:text-[clamp(6rem,9.2vw,8.25rem)]"
-          >
-            Up for <br className="hidden lg:block" />
-            grabs
-          </h2>
-          <div className="flex flex-col gap-[22px] lg:gap-[18px] lg:pb-2.5">
-            <p className="text-base leading-[1.45] text-pretty lg:text-xl">
-              Four rewards, two ways to earn them: on your own, or together with your homeroom.
-            </p>
-            <Stamp className="-rotate-2 self-start border-ink px-2 py-1 text-[11.5px] font-semibold tracking-normal lg:px-2.5 lg:py-[5px] lg:text-[12.5px]">
-              Official rules — good luck!
-            </Stamp>
-          </div>
-        </div>
+      <div className={`${WRAP} flex flex-col gap-[30px] pt-10 pb-12 lg:gap-14 lg:pt-20 lg:pb-24`}>
+        <h2
+          id="incentives-title"
+          className="font-display text-[clamp(3.5rem,18vw,4.5rem)] leading-[.84] font-black uppercase lg:text-[clamp(6rem,9.2vw,8.25rem)]"
+        >
+          Up for grabs
+        </h2>
 
         <div className="flex flex-col gap-[22px] xl:grid xl:grid-cols-[minmax(0,5fr)_minmax(0,7fr)] xl:gap-14">
           <div className="flex flex-col gap-[22px] lg:gap-7">

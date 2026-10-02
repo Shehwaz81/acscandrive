@@ -33,15 +33,6 @@ export function MarkerUnderline({
   );
 }
 
-/** Rubber stamp: a short, hand-stamped note. */
-export function Stamp({ children, className = "" }: { children: ReactNode; className?: string }) {
-  return (
-    <span className={`inline-block border-2 font-mono font-bold tracking-[.12em] ${className}`}>
-      {children}
-    </span>
-  );
-}
-
 /** Assumption College crest. Decorative: the school name always sits beside it. */
 export function SchoolLogo({ className = "" }: { className?: string }) {
   return (

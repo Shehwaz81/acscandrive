@@ -90,7 +90,7 @@ export function GradeWars({
             </p>
           </div>
           <p className="text-sm text-body lg:ml-auto lg:text-right">
-            One day’s donations only. For overall drive totals, see{" "}
+            For overall drive totals, see{" "}
             <a href="#standings" className="inline-flex min-h-11 items-center font-semibold underline lg:min-h-0">
               The standings&nbsp;<span aria-hidden>↑</span>
             </a>
@@ -105,7 +105,7 @@ export function GradeWars({
                 role={board.kind === "loading" ? "status" : undefined}
                 className="absolute top-0 left-1/2 flex w-[min(420px,calc(100%-8px))] -translate-x-1/2 flex-col items-start gap-3 border-[3px] border-ink bg-paper p-4 shadow-[8px_8px_0_var(--color-ink)] lg:top-6 lg:p-5 xl:left-[min(50%,400px)]"
               >
-                <p className="font-display text-xl leading-tight font-extrabold uppercase lg:text-2xl">{card}</p>
+                <p className="font-display text-xl leading-tight font-extrabold text-balance uppercase lg:text-2xl">{card}</p>
                 {board.kind === "error" && (
                   <button
                     type="button"
