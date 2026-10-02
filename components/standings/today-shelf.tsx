@@ -9,7 +9,7 @@ import { fullName, rankText, shelfLabel, tieNote, updatedLabel } from "@/lib/sta
 import type { StandingsData, StudentRef, TodayEntry } from "@/lib/standings/types";
 import { WRAP } from "@/lib/site";
 
-export type PageData = { kind: "ready"; data: StandingsData } | { kind: "loading" } | { kind: "error" };
+export type PageData = { kind: "ready"; data: StandingsData } | { kind: "error" };
 export type OpenStudent = (ref: StudentRef, trigger: HTMLElement | null) => void;
 
 // Can height shows the place, never the amount. Sizes are [phone, lg and up].
@@ -59,7 +59,6 @@ const PLACES = [
 const CHIP = {
   live: "bg-butter text-ink",
   empty: "bg-kraft text-ink",
-  loading: "bg-kraft text-ink",
   error: "bg-tomato text-white",
 };
 
@@ -87,7 +86,7 @@ export function TodayShelf({
   const leader = podium[0];
   const note =
     showOutsideNote && leader && leader.allTimeRank !== null && leader.allTimeRank > TOP_N
-      ? `↙ #${leader.allTimeRank} all-time. Not in the top ${TOP_N}, yet!`
+      ? `#${leader.allTimeRank} all-time.\nNot in the top ${TOP_N}, yet!`
       : null;
   const tie = tieNote(podium);
 
@@ -98,7 +97,7 @@ export function TodayShelf({
           <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
             <span className={`px-2.5 py-1.5 font-mono text-[11px] font-bold tracking-[.12em] whitespace-nowrap uppercase lg:text-xs ${CHIP[state]}`}>
               {state === "live" && <span aria-hidden>● </span>}
-              {{ live: "Leading today", empty: "No donations yet", loading: "Loading…", error: "Unavailable" }[state]}
+              {{ live: "Leading today", empty: "No donations yet", error: "Unavailable" }[state]}
             </span>
             {today && (
               <p className="font-display text-xl leading-none font-extrabold uppercase lg:text-[28px]">{longDate(today.date)}</p>
@@ -125,14 +124,13 @@ export function TodayShelf({
           </div>
 
           <div className="relative xl:col-start-2 xl:row-span-2 xl:row-start-1">
-            <ol className="grid grid-cols-2 lg:grid-cols-[1fr_1.15fr_1fr] lg:pt-16">
+            <ol className="grid grid-cols-2 lg:grid-cols-[1fr_1.15fr_1fr]">
               {PLACES.map((p, i) => (
                 <Spot key={p.suffix} place={i + 1} entry={podium[i]} known={page.kind === "ready"} note={i === 0 ? note : null} onOpen={onOpen} />
               ))}
             </ol>
             {state !== "live" && (
               <div
-                role={state === "loading" ? "status" : undefined}
                 className="absolute top-10 left-1/2 flex w-[min(400px,calc(100%-24px))] -translate-x-1/2 -rotate-2 flex-col items-start gap-2.5 border-[3px] border-ink bg-paper p-4 shadow-[8px_8px_0_var(--color-ink)] lg:top-24 lg:p-5"
               >
                 {state === "empty" && (
@@ -145,9 +143,6 @@ export function TodayShelf({
                       takes the top spot.
                     </p>
                   </>
-                )}
-                {state === "loading" && (
-                  <p className="font-display text-2xl leading-none font-extrabold uppercase">Loading today’s donations…</p>
                 )}
                 {state === "error" && (
                   <>
@@ -181,7 +176,7 @@ function Spot({
 }: {
   place: number;
   entry: TodayEntry | undefined;
-  /** False while loading or failed: the outline then claims nothing about the spot. */
+  /** False when the page failed to load: the outline then claims nothing about the spot. */
   known: boolean;
   note: string | null;
   onOpen: OpenStudent;
@@ -222,8 +217,23 @@ function Spot({
           </div>
         )}
         {note && (
-          <p className="mb-10 max-w-[150px] -rotate-4 font-marker text-lg leading-tight text-tomato lg:absolute lg:bottom-full lg:left-[58%] lg:mb-1 lg:w-[250px] lg:max-w-none lg:text-[22px]">
+          // Sits in the open space beside the leader (above the shorter 3rd can on desktop),
+          // with a drawn arrow back to the can, so it never touches the cans.
+          <p className="relative mb-16 max-w-[140px] origin-left -rotate-3 font-marker text-[17px] leading-[1.15] text-tomato lg:absolute lg:top-1 lg:left-full lg:mb-0 lg:ml-4 lg:w-[205px] lg:max-w-none lg:text-lg lg:whitespace-pre-line">
             {note}
+            <svg
+              aria-hidden
+              viewBox="0 0 48 34"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2.5"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              className="absolute top-full -left-3 mt-1 h-[30px] w-[42px] lg:-left-4"
+            >
+              <path d="M44 3 C 40 20, 26 28, 6 25" />
+              <path d="M15 17 L 5 25 L 16 31" />
+            </svg>
           </p>
         )}
       </div>

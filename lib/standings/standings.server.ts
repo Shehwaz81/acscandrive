@@ -11,8 +11,6 @@ import {
   type StandingsIndex,
   type StandingsLog,
 } from "./build";
-import { DATA_SOURCE } from "./index";
-import { mockStandingsData } from "./mock-repository";
 import { openStudentRef, sealStudentRef } from "./ref";
 import type { SearchResult, StandingsData, StudentProfile } from "./types";
 
@@ -129,11 +127,9 @@ function loadRecent(): Promise<Loaded> {
 
 /**
  * The podium and the all-time table, fetched once by `app/students/page.tsx`
- * (rebuilt at most once a minute). With the `mock` data source this is the
- * fictional data and the database is not read.
+ * (rebuilt at most once a minute).
  */
 export async function getStandingsData(): Promise<StandingsData> {
-  if (DATA_SOURCE === "mock") return mockStandingsData();
   const key = secret();
   const { index } = await load();
   return buildStandingsData(index, (id) => sealStudentRef(id, key));

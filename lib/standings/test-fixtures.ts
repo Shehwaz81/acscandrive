@@ -11,26 +11,22 @@ import { type StandingsRepository, StudentNotFoundError } from "./repository";
 import type { SearchResult, StandingsData, StudentProfile, StudentRef } from "./types";
 
 /**
- * Fictional students and donation logs for the Student Standings page. Every
- * figure is computed from these logs by the same `build.ts` the real path
- * uses, so totals always add up. The clock is fixed at MOCK_NOW so the page is
- * the same on every load.
+ * Test fixtures only: no app code may import this file. Fictional students and
+ * donation logs for the standings tests, with an in-memory repository over
+ * them. Every figure is computed from these logs by the same `build.ts` the
+ * app uses, so totals always add up. The clock is fixed at MOCK_NOW.
  *
  * Cases on purpose: today's #1 (Maya Reyes) is #29 all-time; two students are
  * called Ava Martin; "Ava Martinez" and "Avery Martins" are near spellings; two
  * students tie for 7th; some students have no donations; one has only $0.50.
  */
 
-export const MOCK_SCENARIOS = ["live", "tie", "two", "none", "loading", "error"] as const;
 /**
  * live: a full day. tie: three students tied for 2nd today. two: only two
- * donors today. none: nothing today. loading: requests never finish.
- * error: the page data and each request's first try fail.
+ * donors today. none: nothing today. error: the page data and each request's
+ * first try fail.
  */
-export type MockScenario = (typeof MOCK_SCENARIOS)[number];
-
-export const isMockScenario = (v: string | null): v is MockScenario =>
-  (MOCK_SCENARIOS as readonly string[]).includes(v ?? "");
+export type MockScenario = "live" | "tie" | "two" | "none" | "error";
 
 /** Friday, October 23, 2026, 11:42 a.m. in Toronto: the drive's last day. */
 export const MOCK_NOW = new Date("2026-10-23T11:42:00-04:00");
@@ -79,7 +75,7 @@ const LADDER = [
 const ROOM_11A_SLOTS = [22, 30, 33, 38, 45];
 
 /** Today's can-equivalents by ladder slot. */
-const TODAY_BY_SLOT: Record<Exclude<MockScenario, "loading" | "error">, Record<number, number>> = {
+const TODAY_BY_SLOT: Record<Exclude<MockScenario, "error">, Record<number, number>> = {
   live: { 28: 46, 2: 34, 9: 31, 5: 27, 14: 22, 19: 20, 30: 18, 22: 15, 33: 12, 11: 9, 40: 5 },
   tie: { 28: 46, 2: 34, 9: 34, 5: 34, 14: 22, 19: 20, 30: 18 },
   two: { 28: 46, 2: 34 },
@@ -188,7 +184,7 @@ const seal = (id: string): StudentRef => `mock-${id}`;
 const open = (ref: StudentRef) => (ref.startsWith("mock-") ? ref.slice(5) : null);
 
 function dataScenario(scenario: MockScenario): keyof typeof TODAY_BY_SLOT {
-  return scenario === "loading" || scenario === "error" ? "live" : scenario;
+  return scenario === "error" ? "live" : scenario;
 }
 
 export function mockIndex(scenario: MockScenario = "live"): StandingsIndex {
@@ -229,7 +225,6 @@ export class MockStandingsRepository implements StandingsRepository {
   }
 
   private gate(key: string): Promise<void> {
-    if (this.scenario === "loading") return new Promise(() => {});
     if (this.scenario === "error" && !this.failed.has(key)) {
       this.failed.add(key);
       return Promise.reject(new Error("Mock failure"));
