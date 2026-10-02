@@ -21,5 +21,6 @@ Suggested reading order:
 13. [Public browser keys: restricted, not hidden](13-public-browser-keys.md). Why a map key has to be visible in the browser, and how referrer, API and quota restrictions limit what a copied key can do.
 14. [Requests that finish out of order](14-out-of-order-responses.md). Why a slow, older response can overwrite a newer one, and how stamping each answer with its question prevents it.
 15. [Calendar dates vs. instants](15-calendar-dates-vs-instants.md). Why `2026-10-23` can display as Oct 22, and how to group moments into local days without off-by-one errors.
+16. [Connecting a page to real data](16-connecting-a-page-to-real-data.md). The path from database row to screen, why the UI could be built on fake data first, why that fake data now lives only in tests, and what removing a flag gives up.
 
 Never put real student names or donation records in these notes.
