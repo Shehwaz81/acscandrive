@@ -9,6 +9,9 @@
   --color-tomato: #c8432a;
   --color-tomato-dark: #b33a23;
   --color-butter: #f2c230;
+  /* Standings medals for 2nd and 3rd; butter is the gold. */
+  --color-silver: #c5cacc;
+  --color-bronze: #cd8a4e;
   --color-muted: #5b554b;
   --color-body: #3a362f;
   --color-rule: #cfc5b0;
