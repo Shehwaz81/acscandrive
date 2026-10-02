@@ -63,7 +63,12 @@ function isExact(tokens: string[], words: string[]): boolean {
   return tokens.every((t) => words.some((w) => w.startsWith(t)));
 }
 
-export function searchStudents(students: Student[], query: string): StudentSearchResult {
+export function searchStudents(
+  students: Student[],
+  query: string,
+  /** Cap on `exact`; the public student search passes Infinity and orders the matches itself. */
+  exactLimit: number = EXACT_LIMIT,
+): StudentSearchResult {
   const q = normalize(query);
   if (!q) return { exact: [], exactTotal: 0, similar: [] };
   const tokens = q.split(" ");
@@ -75,7 +80,7 @@ export function searchStudents(students: Student[], query: string): StudentSearc
   }
   exact.sort(compareStudents);
   const exactTotal = exact.length;
-  const shown = exact.slice(0, EXACT_LIMIT);
+  const shown = exact.slice(0, exactLimit);
 
   if (q.length < SIMILAR_MIN_QUERY) return { exact: shown, exactTotal, similar: [] };
 
