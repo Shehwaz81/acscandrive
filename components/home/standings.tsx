@@ -132,6 +132,13 @@ export function Standings({ homerooms }: { homerooms: Homeroom[] }) {
 
 type Ranked = Homeroom & { rank: number };
 
+// Gold, silver and bronze for ranks 1 to 3.
+const MEDALS = [
+  { text: "text-butter", bg: "bg-butter" },
+  { text: "text-silver", bg: "bg-silver" },
+  { text: "text-bronze", bg: "bg-bronze" },
+];
+
 function Row({
   h,
   leaderTotal,
@@ -143,22 +150,35 @@ function Row({
   selected: boolean;
   onClick: () => void;
 }) {
-  // No leader until someone has donated.
+  // No medals until someone has donated.
+  const medal = h.total > 0 ? MEDALS[h.rank - 1] : undefined;
   const leader = h.rank === 1 && h.total > 0;
-  const fg = selected ? "text-ink" : leader ? "text-butter" : "text-paper";
-  const bar = selected ? "bg-ink" : leader ? "bg-butter" : "bg-paper";
+  const fg = selected ? "text-ink" : (medal?.text ?? "text-paper");
+  const bar = selected ? "bg-ink" : (medal?.bg ?? "bg-paper");
+  // A selected row fills with its own medal colour, so butter always means first.
+  const fill = selected ? (medal?.bg ?? "bg-paper") : "hover:bg-paper/5";
   return (
     <button
       type="button"
       onClick={onClick}
       aria-pressed={selected}
       aria-label={`${h.teacher}, homeroom ${h.room}, ${gradeLabel(h)}, rank ${h.rank}, ${fmt(h.total)} can-equivalents`}
-      className={`grid min-h-[60px] w-full grid-cols-[58px_minmax(0,1fr)_auto] items-center gap-3 px-3 py-2.5 text-left xl:min-h-16 xl:grid-cols-[72px_minmax(0,1fr)_130px_190px] xl:gap-4 xl:px-5 xl:py-3 ${fg} ${selected ? "bg-butter" : "hover:bg-paper/5"}`}
+      className={`grid min-h-[60px] w-full grid-cols-[58px_minmax(0,1fr)_auto] items-center gap-3 px-3 py-2.5 text-left xl:min-h-16 xl:grid-cols-[72px_minmax(0,1fr)_130px_190px] xl:gap-4 xl:px-5 xl:py-3 ${fg} ${fill}`}
     >
-      <span className="flex items-baseline gap-0.5 xl:gap-1">
-        <span className="font-display text-[32px] leading-none font-black xl:text-[40px]">
-          {String(h.rank).padStart(2, "0")}
-        </span>
+      <span className={`flex gap-0.5 xl:gap-1 ${medal ? "items-center" : "items-baseline"}`}>
+        {medal ? (
+          // A can lid seen from above, stamped with the rank. Inverts when the row is selected.
+          <span
+            className={`relative grid size-10 flex-none -rotate-6 place-items-center rounded-full font-display text-[26px] leading-none font-black xl:size-12 xl:text-[32px] ${selected ? `bg-ink ${medal.text}` : `${medal.bg} text-ink`}`}
+          >
+            <span aria-hidden className="absolute inset-[3px] rounded-full border-2 border-current opacity-30" />
+            {h.rank}
+          </span>
+        ) : (
+          <span className="font-display text-[32px] leading-none font-black xl:text-[40px]">
+            {String(h.rank).padStart(2, "0")}
+          </span>
+        )}
         <span className="text-[11px] font-bold xl:text-[13px]">{ordinalSuffix(h.rank)}</span>
       </span>
       <span className="flex flex-col gap-0.5 xl:flex-row xl:flex-wrap xl:items-center xl:gap-x-3 xl:gap-y-1">
