@@ -9,7 +9,7 @@ import { fullName, rankText, shelfLabel, tieNote, updatedLabel } from "@/lib/sta
 import type { StandingsData, StudentRef, TodayEntry } from "@/lib/standings/types";
 import { WRAP } from "@/lib/site";
 
-export type PageData = { kind: "ready"; data: StandingsData } | { kind: "loading" } | { kind: "error" };
+export type PageData = { kind: "ready"; data: StandingsData } | { kind: "error" };
 export type OpenStudent = (ref: StudentRef, trigger: HTMLElement | null) => void;
 
 // Can height shows the place, never the amount. Sizes are [phone, lg and up].
@@ -59,7 +59,6 @@ const PLACES = [
 const CHIP = {
   live: "bg-butter text-ink",
   empty: "bg-kraft text-ink",
-  loading: "bg-kraft text-ink",
   error: "bg-tomato text-white",
 };
 
@@ -98,7 +97,7 @@ export function TodayShelf({
           <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
             <span className={`px-2.5 py-1.5 font-mono text-[11px] font-bold tracking-[.12em] whitespace-nowrap uppercase lg:text-xs ${CHIP[state]}`}>
               {state === "live" && <span aria-hidden>● </span>}
-              {{ live: "Leading today", empty: "No donations yet", loading: "Loading…", error: "Unavailable" }[state]}
+              {{ live: "Leading today", empty: "No donations yet", error: "Unavailable" }[state]}
             </span>
             {today && (
               <p className="font-display text-xl leading-none font-extrabold uppercase lg:text-[28px]">{longDate(today.date)}</p>
@@ -132,7 +131,6 @@ export function TodayShelf({
             </ol>
             {state !== "live" && (
               <div
-                role={state === "loading" ? "status" : undefined}
                 className="absolute top-10 left-1/2 flex w-[min(400px,calc(100%-24px))] -translate-x-1/2 -rotate-2 flex-col items-start gap-2.5 border-[3px] border-ink bg-paper p-4 shadow-[8px_8px_0_var(--color-ink)] lg:top-24 lg:p-5"
               >
                 {state === "empty" && (
@@ -145,9 +143,6 @@ export function TodayShelf({
                       takes the top spot.
                     </p>
                   </>
-                )}
-                {state === "loading" && (
-                  <p className="font-display text-2xl leading-none font-extrabold uppercase">Loading today’s donations…</p>
                 )}
                 {state === "error" && (
                   <>
@@ -181,7 +176,7 @@ function Spot({
 }: {
   place: number;
   entry: TodayEntry | undefined;
-  /** False while loading or failed: the outline then claims nothing about the spot. */
+  /** False when the page failed to load: the outline then claims nothing about the spot. */
   known: boolean;
   note: string | null;
   onOpen: OpenStudent;

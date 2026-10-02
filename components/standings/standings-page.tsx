@@ -4,9 +4,8 @@ import { useEffect, useId, useMemo, useRef, useState } from "react";
 import { SiteFooter } from "@/components/home/site-footer";
 import { SiteHeader } from "@/components/home/site-header";
 import { fmt } from "@/lib/homepage";
-import { createStandingsRepository, DATA_SOURCE } from "@/lib/standings";
+import { createStandingsRepository } from "@/lib/standings";
 import { TOP_N } from "@/lib/standings/build";
-import { isMockScenario, mockStandingsData } from "@/lib/standings/mock-repository";
 import type { StandingsRepository } from "@/lib/standings/repository";
 import type { StandingsData, StudentRef } from "@/lib/standings/types";
 import { useStudentProfile } from "@/lib/standings/use-student-profile";
@@ -38,22 +37,9 @@ export function StandingsPage({
   /** Passed to TodayShelf: false hides the "not in the top 25, yet" marker note. */
   showOutsideNote?: boolean;
 }) {
-  // ?standings=live|tie|two|none|loading|error picks a mock scenario; ignored with real data.
-  const param = useUrlParam("standings");
-  const scenario = DATA_SOURCE === "mock" && !repository && isMockScenario(param) ? param : null;
-  const [retried, setRetried] = useState(false);
-
-  const page = useMemo<PageData>(() => {
-    if (scenario === "loading") return { kind: "loading" };
-    if (scenario === "error") return retried ? { kind: "ready", data: mockStandingsData() } : { kind: "error" };
-    if (scenario) return { kind: "ready", data: mockStandingsData(scenario) };
-    return data ? { kind: "ready", data } : { kind: "error" };
-  }, [scenario, retried, data]);
-  const repo = useMemo(
-    () => repository ?? createStandingsRepository(DATA_SOURCE, scenario ?? "live"),
-    [repository, scenario],
-  );
-  const retry = () => (scenario === "error" ? setRetried(true) : onRetry ? onRetry() : window.location.reload());
+  const page: PageData = data ? { kind: "ready", data } : { kind: "error" };
+  const repo = useMemo(() => repository ?? createStandingsRepository(), [repository]);
+  const retry = () => (onRetry ? onRetry() : window.location.reload());
 
   const [query, setQuery] = useState("");
   const search = useStudentSearch(repo, query);
@@ -118,11 +104,6 @@ export function StandingsPage({
       </div>
 
       <main id="main" tabIndex={-1} className="overflow-x-clip outline-none">
-        {DATA_SOURCE === "mock" && !repository && (
-          <p className="bg-butter px-5 py-2 text-center text-sm font-semibold">
-            Demo data: these students and donations are made up.
-          </p>
-        )}
         <section aria-labelledby="page-title" className="bg-paper">
           <div
             className={`${WRAP} grid gap-8 pt-9 pb-9 lg:grid-cols-[minmax(0,7fr)_minmax(0,5fr)] lg:items-end lg:gap-16 lg:pt-16 lg:pb-14`}

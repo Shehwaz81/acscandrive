@@ -11,7 +11,7 @@ import {
   type StandingsLog,
 } from "./build";
 import { dressDownStatus, homeroomStatus } from "./format";
-import { mockIndex } from "./mock-repository";
+import { mockIndex } from "./test-fixtures";
 import { sealStudentRef } from "./ref";
 import { DRESS_DOWN, dressDownWindows } from "./rules";
 

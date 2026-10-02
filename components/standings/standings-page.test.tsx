@@ -1,7 +1,7 @@
 import { cleanup, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { type MockScenario, MockStandingsRepository, mockStandingsData } from "@/lib/standings/mock-repository";
+import { type MockScenario, MockStandingsRepository, mockStandingsData } from "@/lib/standings/test-fixtures";
 import type { StandingsRepository } from "@/lib/standings/repository";
 import type { StandingsData } from "@/lib/standings/types";
 import { tableNote } from "./all-time-table";

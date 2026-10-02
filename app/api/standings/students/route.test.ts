@@ -4,13 +4,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 // Route tests don't reach a database: the query functions are stubs.
 const db = vi.hoisted(() => ({ searchStandingsStudents: vi.fn(), getStandingsProfile: vi.fn() }));
-const flag = vi.hoisted(() => ({ source: "supabase" }));
 vi.mock("@/lib/standings/standings.server", () => db);
-vi.mock("@/lib/standings", () => ({
-  get DATA_SOURCE() {
-    return flag.source;
-  },
-}));
 
 const search = await import("./route");
 const profile = await import("./[ref]/route");
@@ -20,7 +14,6 @@ const ctx = (ref: string) => ({ params: Promise.resolve({ ref }) });
 
 beforeEach(() => {
   vi.clearAllMocks();
-  flag.source = "supabase";
 });
 
 describe("standings routes", () => {
@@ -46,14 +39,5 @@ describe("standings routes", () => {
     const b = await profile.GET(get("/api/standings/students/ref"), ctx("ref"));
     expect([a.status, b.status]).toEqual([502, 502]);
     expect(await a.json()).toHaveProperty("error");
-  });
-
-  it("serve nothing while the data source is mock", async () => {
-    flag.source = "mock";
-    const a = await search.GET(get("/api/standings/students?q=maya"));
-    const b = await profile.GET(get("/api/standings/students/ref"), ctx("ref"));
-    expect([a.status, b.status]).toEqual([404, 404]);
-    expect(db.searchStandingsStudents).not.toHaveBeenCalled();
-    expect(db.getStandingsProfile).not.toHaveBeenCalled();
   });
 });

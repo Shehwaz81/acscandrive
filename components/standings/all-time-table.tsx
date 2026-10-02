@@ -8,8 +8,6 @@ import { WRAP } from "@/lib/site";
 import { formatCents } from "@/lib/volunteer/money";
 import type { OpenStudent, PageData } from "./today-shelf";
 
-const SKELETON_ROWS = 8;
-
 /** Under the table: how many are shown and why, never implying a tiebreaker. */
 export function tableNote(rows: RankedStudent[], donorCount: number): string {
   const ties = "Equal totals share a rank; within a tie, names are listed alphabetically and that order decides nothing.";
@@ -70,7 +68,7 @@ export function AllTimeTable({
             </button>
           </div>
         ) : (
-          <table className="w-full border-collapse text-left" aria-busy={page.kind === "loading"}>
+          <table className="w-full border-collapse text-left">
             <caption className="sr-only">All-time top {TOP_N} students by total contributions</caption>
             <thead>
               <tr className="border-b-2 border-paper font-mono text-[11px] font-semibold tracking-[.1em] text-rule lg:text-[11.5px]">
@@ -92,24 +90,11 @@ export function AllTimeTable({
               </tr>
             </thead>
             <tbody>
-              {page.kind === "loading" &&
-                Array.from({ length: SKELETON_ROWS }, (_, i) => (
-                  <tr key={i} className="h-[66px] border-b border-paper/16">
-                    <td colSpan={5} className="px-2 lg:px-5">
-                      <span className="block h-5 animate-pulse bg-paper/16 motion-reduce:animate-none" />
-                    </td>
-                  </tr>
-                ))}
               {rows.map((r, i) => (
                 <Row key={r.ref} row={r} divider={i === firstLower && i > 0} selected={r.ref === selected} onOpen={onOpen} />
               ))}
             </tbody>
           </table>
-        )}
-        {page.kind === "loading" && (
-          <p role="status" className="sr-only">
-            Loading the all-time table…
-          </p>
         )}
 
         {allTime && (
