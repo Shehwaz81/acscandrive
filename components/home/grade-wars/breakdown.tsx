@@ -4,7 +4,12 @@ import { GRADES } from "@/lib/grade-wars/types";
 import { type Board, rankText, tagFor } from "@/lib/grade-wars/view";
 import { GradeTag } from "./tag";
 
-const PLACEHOLDER_LINE = { empty: "No donations recorded", loading: "Loading…", error: "Unavailable" };
+const PLACEHOLDER_LINE = {
+  empty: "No donations recorded",
+  loading: "Loading…",
+  error: "Unavailable",
+  upcoming: "Not started",
+};
 
 /** The accessible ranking: four rows in rank order (grade order when there is none). */
 export function Breakdown({ board, date }: { board: Board; date: string | null }) {

@@ -4,7 +4,7 @@
 
 A page asks the server for something, the user changes their mind, and the page asks for something else. Now two requests are in flight. Nothing guarantees they come back in the order they were sent: the first one might hit a slow database query, a cold server or a congested network.
 
-Grade Wars is a simple example. The visitor is looking at Friday and clicks Monday:
+Grade Wars is a simple example. (It now receives all of its figures with the page, so in practice its answers come from memory and can't race. The guard stays because its data interface is still asynchronous, and the example still shows the general problem.) The visitor is looking at Friday and clicks Monday:
 
 ```
 t=0ms    request Friday's ranking   ───────────────────────────────┐ (slow)

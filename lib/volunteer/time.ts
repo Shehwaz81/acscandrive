@@ -7,6 +7,12 @@ const dayKeyFmt = new Intl.DateTimeFormat("en-CA", {
   month: "2-digit",
   day: "2-digit",
 });
+const clockFmt = new Intl.DateTimeFormat("en-CA", {
+  timeZone: SCHOOL_TZ,
+  hour: "2-digit",
+  minute: "2-digit",
+  hourCycle: "h23",
+});
 const dayFmt = new Intl.DateTimeFormat("en-US", {
   timeZone: SCHOOL_TZ,
   weekday: "short",
@@ -22,6 +28,11 @@ const timeFmt = new Intl.DateTimeFormat("en-US", {
 /** Local calendar day in Toronto, e.g. "2026-09-28". */
 export function torontoDayKey(d: Date | string): string {
   return dayKeyFmt.format(new Date(d));
+}
+
+/** Wall-clock time in Toronto, 24-hour, e.g. "08:10". Compares as a string. */
+export function torontoClock(d: Date | string): string {
+  return clockFmt.format(new Date(d));
 }
 
 export function isTodayToronto(iso: string, now: Date = new Date()): boolean {

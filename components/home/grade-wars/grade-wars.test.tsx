@@ -3,11 +3,14 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it } from "vitest";
 import { MockGradeWarsRepository } from "@/lib/grade-wars/mock";
 import type { GradeWarsRepository } from "@/lib/grade-wars/repository";
+import type { GradeWarsData } from "@/lib/grade-wars/types";
 import { GradeWars } from "./grade-wars";
 
 afterEach(cleanup);
 
-const mock = () => new MockGradeWarsRepository({ delayMs: 0, mode: null });
+const mock = () => new MockGradeWarsRepository();
+const NO_DAYS: GradeWarsData = { days: [], results: [] };
+const show = (repository: GradeWarsRepository) => render(<GradeWars data={NO_DAYS} repository={repository} />);
 
 async function ranking(date: RegExp) {
   return screen.findByRole("list", { name: date });
@@ -22,7 +25,7 @@ function rows(list: HTMLElement) {
 
 describe("GradeWars", () => {
   it("defaults to the latest day with Grade 11 first at 420", async () => {
-    render(<GradeWars repository={mock()} />);
+    show(mock());
     const list = await ranking(/Friday, October 23/);
     await waitFor(() => expect(rows(list)[0]).toMatch(/^1stGrade 11Day winner420/));
     expect(rows(list)[1]).toMatch(/^2ndGrade 9365/);
@@ -32,7 +35,7 @@ describe("GradeWars", () => {
 
   it("steps back a day with ← and re-ranks", async () => {
     const user = userEvent.setup();
-    render(<GradeWars repository={mock()} />);
+    show(mock());
     await waitFor(async () => expect(rows(await ranking(/October 23/))[0]).toMatch(/Grade 11/));
     await user.click(screen.getByRole("button", { name: "Previous day" }));
     const list = await ranking(/Thursday, October 22/);
@@ -41,7 +44,7 @@ describe("GradeWars", () => {
 
   it("shows two Tied 1st tags on Oct 20", async () => {
     const user = userEvent.setup();
-    render(<GradeWars repository={mock()} />);
+    show(mock());
     await user.click(await screen.findByRole("button", { name: "Tuesday, October 20" }));
     const list = await ranking(/Tuesday, October 20/);
     await waitFor(() => expect(within(list).getAllByText("Tied 1st")).toHaveLength(2));
@@ -51,7 +54,7 @@ describe("GradeWars", () => {
 
   it("names no winner on the empty Oct 21", async () => {
     const user = userEvent.setup();
-    render(<GradeWars repository={mock()} />);
+    show(mock());
     await user.click(await screen.findByRole("button", { name: "Wednesday, October 21" }));
     // The status card, and the live region announcing it.
     expect(await screen.findAllByText(/no ranking and no winner for this day/)).toHaveLength(2);
@@ -62,7 +65,7 @@ describe("GradeWars", () => {
 
   it("moves between chips with arrow keys, Home and End", async () => {
     const user = userEvent.setup();
-    render(<GradeWars repository={mock()} />);
+    show(mock());
     const latest = await screen.findByRole("button", { name: "Friday, October 23 (latest)" });
     expect(latest).toHaveAttribute("tabindex", "0");
     latest.focus();
@@ -88,7 +91,7 @@ describe("GradeWars", () => {
       listCollectionDays: () => inner.listCollectionDays(),
       getDayResult: (id) => (++calls === 1 ? Promise.reject(new Error("down")) : inner.getDayResult(id)),
     };
-    render(<GradeWars repository={flaky} />);
+    show(flaky);
     await user.click(await screen.findByRole("button", { name: "Try again" }));
     const list = await ranking(/October 23/);
     await waitFor(() => expect(rows(list)[0]).toMatch(/Grade 11/));
@@ -97,7 +100,7 @@ describe("GradeWars", () => {
   });
 
   it("says Leading today, never winner, while the day is in progress", async () => {
-    render(<GradeWars repository={new MockGradeWarsRepository({ delayMs: 0, mode: "live" })} />);
+    show(new MockGradeWarsRepository({ live: true }));
     const list = await ranking(/October 23/);
     await waitFor(() => expect(within(list).getByText("Leading today")).toBeInTheDocument());
     expect(screen.queryByText("Day winner")).not.toBeInTheDocument();
@@ -117,12 +120,21 @@ describe("GradeWars", () => {
             })
           : inner.getDayResult(id),
     };
-    render(<GradeWars repository={slowFirst} />);
+    show(slowFirst);
     await user.click(await screen.findByRole("button", { name: "Monday, October 19" }));
     const list = await ranking(/Monday, October 19/);
     await waitFor(() => expect(rows(list)[0]).toMatch(/Grade 12/));
     releaseOld();
     await new Promise((r) => setTimeout(r, 0));
     expect(rows(await ranking(/Monday, October 19/))[0]).toMatch(/Grade 12/);
+  });
+
+  it("says when Grade Wars starts, not Loading…, before the first collection day", async () => {
+    render(<GradeWars data={NO_DAYS} />);
+    expect(await screen.findByText("Grade Wars starts Monday, October 5")).toBeInTheDocument();
+    // The chip and the four grade rows.
+    expect(screen.getAllByText("Not started")).toHaveLength(5);
+    expect(screen.queryByText(/Loading/)).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /October/ })).not.toBeInTheDocument();
   });
 });

@@ -1,5 +1,4 @@
 import type { CSSProperties } from "react";
-import { Stamp } from "@/components/marks";
 import { fmt, ordinalSuffix } from "@/lib/homepage";
 import type { Rank } from "@/lib/grade-wars/rank";
 import { type Board, leadNote, tagFor } from "@/lib/grade-wars/view";
@@ -67,17 +66,12 @@ function columnsFor(board: Board): Column[] {
 }
 
 /** Decorative: the breakdown list is the accessible ranking. */
-export function Podium({ board, demo }: { board: Board; demo: boolean }) {
+export function Podium({ board }: { board: Board }) {
   const columns = columnsFor(board);
   const mobileNote = columns[0].note?.mobile;
   return (
     <div aria-hidden className="w-full max-w-[800px]">
       <div className="relative h-[330px] lg:h-[540px]">
-        {demo && (
-          <span className="absolute top-0 right-0 hidden lg:block">
-            <Stamp className="rotate-6 border-tomato px-2.5 py-1 text-[12px] text-tomato">DEMO DATA</Stamp>
-          </span>
-        )}
         {mobileNote && (
           <span className="absolute top-1 right-0 max-w-[46%] -rotate-5 text-right font-marker text-lg leading-[1.15] text-tomato lg:hidden">
             {mobileNote}
@@ -94,7 +88,7 @@ export function Podium({ board, demo }: { board: Board; demo: boolean }) {
           <span className="hidden lg:inline">STACK </span>HEIGHT = PLACE, NOT AMOUNT
         </span>
         <span className="hidden lg:inline">TOTALS IN CAN-EQUIVALENTS</span>
-        <span className="lg:hidden">{demo ? "DEMO DATA" : "CAN-EQUIVALENTS"}</span>
+        <span className="lg:hidden">CAN-EQUIVALENTS</span>
       </div>
     </div>
   );

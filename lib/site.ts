@@ -17,6 +17,11 @@ export const DRIVE = {
   /** School goal in can-equivalents. */
   goal: 20_000,
   dates: "October 5–23",
+  /** First and last collection days (America/Toronto calendar dates). */
+  startDate: "2026-10-05",
+  endDate: "2026-10-23",
+  /** A day's Grade Wars ranking is final from this Toronto time (desk closes). */
+  dailyCutoff: "08:10",
   shortDates: "Oct 5–23",
   deskLocation: "California entrance",
   deskHours: "7:30–8:10 a.m.",

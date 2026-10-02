@@ -1,18 +1,18 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { gradeWarsRepository } from "./index";
 import type { GradeWarsRepository } from "./repository";
 import type { CollectionDay, GradeDayResult } from "./types";
 
-export type GradeWarsStatus = "loading" | "error" | "ready";
+/** "upcoming": no collection days yet (before the drive starts). */
+export type GradeWarsStatus = "loading" | "error" | "ready" | "upcoming";
 
 /**
  * Collection days plus the selected day's result. Defaults to the latest day.
  * A response is only shown if it answers the current day and attempt, so a
  * slow reply for a day the user has already left is dropped.
  */
-export function useGradeWars(repo: GradeWarsRepository = gradeWarsRepository) {
+export function useGradeWars(repo: GradeWarsRepository) {
   // Bumped by retry() to refetch after a failure.
   const [attempt, setAttempt] = useState(0);
   const [daysState, setDaysState] = useState<{ attempt: number; days?: CollectionDay[] } | null>(null);
@@ -56,6 +56,7 @@ export function useGradeWars(repo: GradeWarsRepository = gradeWarsRepository) {
 
   let status: GradeWarsStatus;
   if (!loadedDays) status = daysState?.attempt === attempt ? "error" : "loading";
+  else if (!selectedDayId) status = "upcoming";
   else if (resultState?.stamp !== stamp) status = "loading";
   else status = resultState.result ? "ready" : "error";
 

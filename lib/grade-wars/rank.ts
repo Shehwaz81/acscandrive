@@ -1,4 +1,3 @@
-import { canEquivalents } from "../volunteer/money";
 import type { Grade, GradeDayTotal } from "./types";
 
 export type Rank = 1 | 2 | 3 | 4;
@@ -16,12 +15,10 @@ export interface RankedGrade {
   share: number;
 }
 
-/** $1 = 1 can-equivalent, partial dollars round down. The app's one rule, reused. */
-export function toCanEquivalents(total: Pick<GradeDayTotal, "cans" | "cashCents">): number {
-  return canEquivalents(total.cans, total.cashCents);
-}
-
 /**
+ * Ranks by each grade's `total` (rounded per student, then summed), never by
+ * re-rounding its summed cans + cash, so the ranking and the shown totals agree.
+ *
  * Competition ranking ("1224"): equal totals share a rank and the next rank is
  * skipped. Equal totals are listed by grade ascending, for display order only;
  * there is deliberately no tiebreaker.
@@ -32,7 +29,7 @@ export function rankDay(totals: GradeDayTotal[]): {
   isEmpty: boolean;
 } {
   const withTotals = totals
-    .map((t) => ({ grade: t.grade, cans: t.cans, cashCents: t.cashCents, total: toCanEquivalents(t) }))
+    .map((t) => ({ grade: t.grade, cans: t.cans, cashCents: t.cashCents, total: t.total }))
     .sort((a, b) => b.total - a.total || a.grade - b.grade);
   const dayTotal = withTotals.reduce((sum, t) => sum + t.total, 0);
 
