@@ -28,8 +28,18 @@ const CLAIMS_ERROR = "Claimed streets couldn't load. Refresh the page to try aga
 const NETWORK_ERROR = "Couldn't reach the server. Check your connection and try again.";
 const PICK_NAME = "Pick your name from the list.";
 
-// Claim pins use the ink and paper tokens; Maps needs raw colours, not classes.
-const PIN = { background: "#1b1a17", borderColor: "#1b1a17", glyphColor: "#f4eee2" };
+// Pin colours mirror the ink, paper, tomato and butter tokens; Maps needs raw
+// colours, not classes. The colour says the same thing as the panel's tag.
+const INK = "#1b1a17";
+const PAPER = "#f4eee2";
+const PINS = {
+  /** Someone's claim. */
+  claimed: { background: INK, borderColor: INK, glyphColor: PAPER },
+  /** The claimed street being looked at: taken. */
+  taken: { background: "#c8432a", borderColor: INK, glyphColor: PAPER },
+  /** This visitor's street: the open one they picked, or one they just claimed. */
+  yours: { background: "#f2c230", borderColor: INK, glyphColor: INK },
+};
 
 type Picked = { placeId: string; street: string; municipality: string; lat: number; lng: number };
 
@@ -85,11 +95,17 @@ function loadMaps(src: string): Promise<void> {
   return mapsLoading;
 }
 
-/** Adds a clickable marker for each new claim and removes markers whose claim is gone. */
+/**
+ * Adds a clickable marker for each new claim, removes markers whose claim is
+ * gone, and colours the selected claim's pin (tomato if taken, butter if the
+ * visitor just claimed it). The picked-street marker steps aside for it.
+ */
 function syncMarkers(
   live: Map<string, google.maps.marker.AdvancedMarkerElement>,
   kit: MapKit,
   claims: PublicClaim[],
+  selected: { placeId: string; mine: boolean } | null,
+  chosen: google.maps.marker.AdvancedMarkerElement | null,
   onSelect: (placeId: string) => void,
 ) {
   const wanted = new Set(claims.map((c) => c.placeId));
@@ -105,12 +121,19 @@ function syncMarkers(
       position: { lat: c.lat, lng: c.lng },
       title: c.address,
       gmpClickable: true,
-      content: new kit.Pin(PIN),
+      content: new kit.Pin(PINS.claimed),
     });
     // gmp-click also fires for Enter on a focused marker.
     m.addEventListener("gmp-click", () => onSelect(c.placeId));
     live.set(c.placeId, m);
   }
+  for (const [placeId, m] of live) {
+    const isSelected = placeId === selected?.placeId;
+    const look = !isSelected ? PINS.claimed : selected.mine ? PINS.yours : PINS.taken;
+    Object.assign(m.content as google.maps.marker.PinElement, look);
+    m.zIndex = isSelected ? 1 : null;
+  }
+  if (selected && chosen) chosen.position = null;
 }
 
 /** Sends a claim request; resolves to the status and parsed body, or throws on a network failure. */
@@ -222,7 +245,7 @@ function StreetPicker() {
         mapTypeControl: false,
         streetViewControl: false,
       });
-      const marker = new AdvancedMarkerElement({ map, title: "Chosen street" });
+      const marker = new AdvancedMarkerElement({ map, title: "Chosen street", content: new PinElement(PINS.yours) });
       chosenRef.current = marker;
 
       const search = new PlaceAutocompleteElement({
@@ -293,15 +316,21 @@ function StreetPicker() {
     };
   }, []);
 
-  // One marker per claim, added and removed as the claims list changes.
+  const placeId = status.kind === "picked" ? status.place.placeId : status.kind === "claim" ? status.placeId : null;
+  const selectedClaim = placeId ? claims?.find((c) => c.placeId === placeId) : undefined;
+  const selectedId = selectedClaim?.placeId ?? null;
+  const mine = status.kind === "picked" && !!status.mine;
+
+  // One marker per claim, added and removed as the claims list changes, with the selected one coloured.
   useEffect(() => {
     if (!kit || !claims) return;
-    syncMarkers(markers.current, kit, claims, (placeId) => {
+    const selected = selectedId ? { placeId: selectedId, mine } : null;
+    syncMarkers(markers.current, kit, claims, selected, chosenRef.current, (placeId) => {
       if (chosenRef.current) chosenRef.current.position = null;
       setStatus({ kind: "claim", placeId });
       panelRef.current?.focus();
     });
-  }, [kit, claims]);
+  }, [kit, claims, selectedId, mine]);
 
   // A response can arrive after the student has moved on to another street;
   // it updates the list but only changes the panel if that street is still selected.
@@ -328,8 +357,7 @@ function StreetPicker() {
 
   if (loadError) return <Unavailable message={loadError} />;
 
-  const placeId = status.kind === "picked" ? status.place.placeId : status.kind === "claim" ? status.placeId : null;
-  const selectedClaim = placeId ? claims?.find((c) => c.placeId === placeId) : undefined;
+  const taken = !!selectedClaim && !mine;
 
   return (
     <>
@@ -346,7 +374,7 @@ function StreetPicker() {
           <div
             ref={mapRef}
             role="region"
-            aria-label="Map of Windsor and Essex County. Claimed streets are dark pins."
+            aria-label="Map of Windsor and Essex County. Claimed streets are dark pins; the street you pick is yellow, or red if it is taken."
             className="h-[320px] w-full bg-zone lg:h-[480px]"
           />
         </div>
@@ -357,9 +385,11 @@ function StreetPicker() {
         tabIndex={-1}
         aria-labelledby="street-panel-title"
         role="region"
-        className="flex flex-col gap-3 border-2 border-ink bg-paper px-4 py-3.5 lg:px-[18px] lg:py-4"
+        className={`flex flex-col gap-3 border-2 bg-paper px-4 py-3.5 lg:px-[18px] lg:py-4 ${
+          taken ? "border-tomato" : "border-ink"
+        }`}
       >
-        <div aria-live="polite" className="flex flex-col gap-1">
+        <div aria-live="polite" className="flex flex-col gap-1.5">
           <Result status={status} claim={selectedClaim} claimsLoading={claims === null} />
         </div>
         {status.kind === "picked" && claims !== null && !selectedClaim && (
@@ -401,18 +431,30 @@ function Result({
       {text}
     </span>
   );
-  const kicker = (text: string) => (
-    <span className="font-mono text-[11px] font-semibold tracking-[.14em] text-muted">{text}</span>
+  // The street's status. The colour matches its pin, and the word carries the meaning without it.
+  const tag = (text: string, look: string) => (
+    <span
+      className={`self-start px-2 pt-1 pb-[3px] font-display text-[15px] leading-none font-extrabold tracking-[.06em] uppercase ${look}`}
+    >
+      {text}
+    </span>
   );
+  const TAKEN = "bg-tomato text-white";
+  const YOURS = "bg-butter text-ink";
+  const OPEN = "bg-ink text-paper";
   const line = (text: ReactNode) => <span className="text-[13.5px] text-body lg:text-sm">{text}</span>;
 
   if (claim && (status.kind === "picked" || status.kind === "claim")) {
     const mine = status.kind === "picked" && status.mine;
     return (
       <>
-        {kicker(mine ? "CLAIMED!" : "TAKEN")}
+        {mine ? tag("Yours", YOURS) : tag("Taken", TAKEN)}
         {title(claim.address)}
-        {line(mine ? `It's yours, ${claim.claimer}.` : `Taken — claimed by ${claim.claimer}`)}
+        {line(
+          mine
+            ? `It's yours, ${claim.claimer}.`
+            : `${claim.claimer} is collecting on this street. Search for another one.`,
+        )}
       </>
     );
   }
@@ -437,9 +479,11 @@ function Result({
     case "picked":
       return (
         <>
-          {kicker("YOUR STREET")}
+          {!claimsLoading && tag("Open", OPEN)}
           {title(status.place.street)}
-          {line(`${status.place.municipality}, Ontario${claimsLoading ? " · checking whether it's free…" : " · open to claim"}`)}
+          {line(
+            `${status.place.municipality}, Ontario. ${claimsLoading ? "Checking whether it's free…" : "Nobody has claimed it yet."}`,
+          )}
         </>
       );
     case "claim":
@@ -453,7 +497,7 @@ function Result({
     case "deleted":
       return (
         <>
-          {kicker("DELETED")}
+          {tag("Open", OPEN)}
           {title(status.address)}
           {line("Claim deleted. The street is open again.")}
         </>
@@ -781,7 +825,12 @@ function DeleteClaim({
 
   if (!open) {
     return (
-      <button type="button" className={`${BTN_SECONDARY} self-start`} onClick={() => setOpen(true)}>
+      // A quiet link: on someone else's street the message is "taken", not an action to take.
+      <button
+        type="button"
+        className="min-h-11 self-start text-[14px] font-semibold text-ink underline underline-offset-4 hover:text-tomato-dark"
+        onClick={() => setOpen(true)}
+      >
         Delete my claim
       </button>
     );
