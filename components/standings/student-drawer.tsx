@@ -280,7 +280,9 @@ function DressDown({ progress }: { progress: DressDownProgress }) {
             {dressDownStatus(w, progress)}
             {w.reached && <span className="font-normal"> · toward {friday}</span>}
           </p>
-          {progress.phase === "before" && <p className="text-sm text-body">Counting starts {shortDate(w.windowStart)}.</p>}
+          {progress.phase !== "ended" && !progress.previous && (
+            <p className="text-sm text-body">Donations logged before {shortDate(w.windowStart)} count toward this first Friday.</p>
+          )}
           {progress.phase === "ended" && <p className="text-sm text-body">That was the last dress-down day of this drive.</p>}
           {w.counted > threshold && progress.carryoverConfirmed && !progress.carryover && (
             <p className="text-sm text-body">Extra cans don’t carry over to the next Friday.</p>
@@ -292,7 +294,7 @@ function DressDown({ progress }: { progress: DressDownProgress }) {
             </p>
           )}
           <p className="text-[13px] text-body">
-            Only this week’s donations count here, not the all-time total.
+            Only this window’s donations count here, not the all-time total.
             {!progress.confirmed && " Dates and cutoff are still to be confirmed by the organizers."}
           </p>
         </div>
@@ -336,7 +338,8 @@ function Dodgeball({ homeroom: h }: { homeroom: HomeroomProgress }) {
           </div>
           <p className="text-[15px] font-bold">{homeroomStatus(h)}</p>
           <p className="text-sm text-rule">
-            A shared target: everyone in {h.homeroom} adds to one total. Nobody has to bring 10 on their own.
+            A shared target: everyone in {h.homeroom} adds to one total. Nobody has to bring 10 on their own. Donations
+            logged before the drive opens count too.
           </p>
           <ol className="grid grid-cols-3 gap-1.5 pt-1">
             {STEPS.map((label, i) => (

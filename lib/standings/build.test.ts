@@ -169,6 +169,15 @@ describe("dress-down progress", () => {
     expect(dressDownStatus(p.current!, p)).toBe("7 more to reach the target");
   });
 
+  it("counts donations dated before the drive toward the first Friday only, never last year's", () => {
+    const logs = [cans(1, 6, "2026-10-02T13:00:00Z"), cash(1, 450, "2026-10-06T13:00:00Z"), cans(1, 50, "2025-10-14T13:00:00Z")];
+    const before = buildDressDown(logs, at("2026-10-03T16:00:00Z"));
+    expect(before).toMatchObject({ phase: "before", current: { friday: "2026-10-09", counted: 10, reached: true } });
+    const week2 = buildDressDown(logs, at("2026-10-14T16:00:00Z"));
+    expect(week2.current).toMatchObject({ friday: "2026-10-16", counted: 0 });
+    expect(week2.previous).toMatchObject({ friday: "2026-10-09", counted: 10 });
+  });
+
   it("switches window at the cutoff: Thursday 11:59 p.m. Toronto", () => {
     // Thu Oct 15 23:59:30 and Fri Oct 16 00:00:00 in Toronto.
     const lastMinute = cans(1, 10, "2026-10-16T03:59:30Z");
@@ -202,6 +211,11 @@ describe("homeroom dodgeball progress", () => {
     expect(homeroomStatus(h)).toBe("5 more to reach the class target");
     // All-time still counts last year's cans.
     expect(buildStudentProfile(index, "2", seal)!.allTime.total).toBe(33);
+  });
+
+  it("counts donations dated before the drive opens, and none after it ends", () => {
+    const index = buildIndex(students, [cans(1, 4, "2026-10-02T13:00:00Z"), cans(2, 5, "2026-10-24T13:00:00Z")], NOW);
+    expect(buildHomeroomProgress(index, "9A").total).toBe(4);
   });
 
   it("stops at 'target reached' until a place is recorded", () => {
