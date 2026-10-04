@@ -16,7 +16,7 @@ import { sealStudentRef } from "./ref";
 import { DRESS_DOWN, dressDownWindows } from "./rules";
 
 // Synthetic students only.
-const st = (id: number, firstName: string, lastName: string, grade = 10, homeroom = "10A"): Student => ({
+const st = (id: number, firstName: string, lastName: string, grade: number | null = 10, homeroom = "10A"): Student => ({
   id: String(id),
   firstName,
   lastName,
@@ -105,6 +105,17 @@ describe("rounding and what counts", () => {
     const d = data(students, [cans(1, 3), online, cans(2, 50), cans(99, 50)]);
     expect(d.allTime.rows.map((r) => [r.ref, r.total])).toEqual([["ref-1", 3]]);
     expect(d.rosterCount).toBe(1);
+  });
+
+  it("ranks staff (no grade, homeroom Teachers) with the students", () => {
+    const students = [st(1, "Ana", "Quill"), st(2, "Bo", "Marsh", null, "Teachers")];
+    const d = data(students, [cans(1, 3), cans(2, 9)]);
+    expect(d.allTime.rows.map((r) => [r.ref, r.grade, r.homeroom, r.rank])).toEqual([
+      ["ref-2", null, "Teachers", 1],
+      ["ref-1", 10, "10A", 2],
+    ]);
+    expect(d.today.entries[0]).toMatchObject({ ref: "ref-2", total: 9 });
+    expect(d.rosterCount).toBe(2);
   });
 });
 

@@ -19,8 +19,8 @@ const DAY_MS = 86_400_000;
  * Totals: logs grouped by the Toronto day of `occurred_at` and the student's
  * roster grade. Rounding follows the homepage: each student's day rounds
  * down, then grades sum. Logs on other days (weekends, outside the drive,
- * older than the five shown) and students missing from the roster or outside
- * Grades 9–12 are skipped.
+ * older than the five shown), students missing from the roster or outside
+ * Grades 9–12, and staff (no grade) are skipped.
  */
 export function buildGradeWars(students: Student[], logs: LogRow[], now: Date): GradeWarsData {
   const today = torontoDayKey(now);
@@ -38,7 +38,9 @@ export function buildGradeWars(students: Student[], logs: LogRow[], now: Date): 
     status: date < today || torontoClock(now) >= DRIVE.dailyCutoff ? "final" : "in_progress",
   }));
 
-  const gradeOf = new Map(students.filter((s) => GRADES.includes(s.grade)).map((s) => [s.id, s.grade]));
+  const gradeOf = new Map(
+    students.flatMap((s) => (s.grade !== null && GRADES.includes(s.grade) ? [[s.id, s.grade] as const] : [])),
+  );
   const shown = new Set(days.map((d) => d.date));
   // "studentId|date" → that student's sums for the day.
   const perStudent = new Map<string, { date: string; grade: Grade; cans: number; cents: number }>();

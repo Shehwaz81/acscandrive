@@ -12,9 +12,13 @@ export interface Student {
   id: string;
   firstName: string;
   lastName: string;
-  grade: Grade;
+  /** Null for staff: the "Teachers" homeroom has no grade. */
+  grade: Grade | null;
   homeroom: string;
 }
+
+/** "Grade 9", or "Staff" for someone in the Teachers homeroom. */
+export const gradeText = (grade: Grade | null) => (grade === null ? "Staff" : `Grade ${grade}`);
 
 export interface DonationLog {
   id: string;

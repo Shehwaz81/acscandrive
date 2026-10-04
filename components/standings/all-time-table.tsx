@@ -6,6 +6,7 @@ import { cansLabel, fullName, rankText } from "@/lib/standings/format";
 import type { RankedStudent, StudentRef } from "@/lib/standings/types";
 import { WRAP } from "@/lib/site";
 import { formatCents } from "@/lib/volunteer/money";
+import { gradeText } from "@/lib/volunteer/types";
 import type { OpenStudent, PageData } from "./today-shelf";
 
 /** Under the table: how many are shown and why, never implying a tiebreaker. */
@@ -166,10 +167,10 @@ function Row({
             <span className="sr-only">, open details</span>
           </button>
           <span className={`block text-[13px] lg:hidden ${selected ? "text-body" : "text-rule"}`}>
-            Grade {row.grade} · {row.homeroom}
+            {gradeText(row.grade)} · {row.homeroom}
           </span>
         </td>
-        <td className="hidden font-display text-[26px] font-extrabold lg:table-cell">{row.grade}</td>
+        <td className="hidden font-display text-[26px] font-extrabold lg:table-cell">{row.grade ?? "—"}</td>
         <td className="hidden lg:table-cell">
           <span className="font-display text-[26px] leading-none font-extrabold">{row.homeroom}</span>
           <span className={`block text-[13px] ${selected ? "text-body" : "text-rule"}`}>{row.teacher}</span>

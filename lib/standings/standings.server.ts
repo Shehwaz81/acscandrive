@@ -39,7 +39,7 @@ function secret(): string {
 
 async function loadStudents(): Promise<{ students: Student[]; teachers: Map<string, string> }> {
   const db = createAdminClient();
-  const rows: { student_id: number; first_name: string; last_name: string; grade: number; hr: string; hr_teacher: string }[] = [];
+  const rows: { student_id: number; first_name: string; last_name: string; grade: number | null; hr: string; hr_teacher: string }[] = [];
   for (let from = 0; ; from += PAGE) {
     const { data, error } = await db
       .from("students")
