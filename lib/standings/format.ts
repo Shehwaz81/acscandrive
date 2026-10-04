@@ -7,6 +7,7 @@ import { shortDate } from "../grade-wars/format";
 import { fmt, ordinalSuffix } from "../homepage";
 import { formatCents } from "../volunteer/money";
 import { formatTime } from "../volunteer/time";
+import { gradeText } from "../volunteer/types";
 import type { DressDownProgress, DressDownWindow, HomeroomProgress, PublicStudent, TodayEntry } from "./types";
 
 export const fullName = (s: Pick<PublicStudent, "firstName" | "lastName">) => `${s.firstName} ${s.lastName}`;
@@ -61,7 +62,7 @@ export function homeroomStatus(h: HomeroomProgress): string {
 
 /** Screen-reader label for a can on the shelf. */
 export function shelfLabel(e: TodayEntry): string {
-  return `${e.tied ? "Tied " : ""}${rankText(e.rank)} today: ${fullName(e)}, grade ${e.grade}, homeroom ${e.homeroom}, ${cansLabel(e.total)} today. Open details.`;
+  return `${e.tied ? "Tied " : ""}${rankText(e.rank)} today: ${fullName(e)}, ${gradeText(e.grade).toLowerCase()}, homeroom ${e.homeroom}, ${cansLabel(e.total)} today. Open details.`;
 }
 
 /** "Tied on 34 cans today. …" for the first tie on the shelf, or null. */

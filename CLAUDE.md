@@ -44,6 +44,7 @@
 
 - Inspect existing migrations before changing the schema.
 - Store contributions as individual records. Compute student, homeroom, grade, and school totals from valid donation records; do not maintain an independently editable cumulative count on `students`.
+- Staff are rows in `students` in the homeroom `Teachers` with `grade` NULL (owner, 2026-10-04; a check constraint ties the two). They are logged, totalled and ranked like students and `Teachers` is a normal homeroom, but they have no grade (shown as "Staff", absent from Grade Wars) and `/students` shows them no reward sections. In TypeScript `Student.grade` is `Grade | null`; print it with `gradeText()`.
 - Keep physical cans and money separate. `cans` records require a positive integer `can_count` and NULL `amount_cents`. `cash`/future `online` records require positive integer `amount_cents` and NULL `can_count`. Enforce valid methods and amounts in the database as well as at the input boundary.
 - Use integer cents for money. Label physical cans and can-equivalent totals accurately. Define rounding before converting fractional dollars to reward equivalents.
 - One donation row represents one method. If a single submission includes both cans and cash, save its rows atomically and make the whole submission retry-safe.

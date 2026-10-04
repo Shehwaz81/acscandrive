@@ -14,7 +14,7 @@ export type Homeroom = {
   room: string;
   /** Homeroom teacher's surname(s), shown before the room code. */
   teacher: string;
-  /** Grades of the students in it; many homerooms mix grades. Ascending. */
+  /** Grades of the students in it; many homerooms mix grades. Ascending. Empty for staff. */
   grades: number[];
   students: number;
   /** Can-equivalents: the sum of each student's total ($1 = 1 can). */
@@ -108,7 +108,7 @@ export function buildHomepageData(
       cans: 0,
       cashCents: 0,
     };
-    r.gradeSet.add(st.grade);
+    if (st.grade !== null) r.gradeSet.add(st.grade);
     r.students += 1;
     const a = allTime.get(st.id);
     if (a) {
@@ -162,9 +162,9 @@ export const ordinalSuffix = (n: number) => {
   return n % 10 === 1 ? "st" : n % 10 === 2 ? "nd" : n % 10 === 3 ? "rd" : "th";
 };
 
-/** "Grade 9" or "Grades 10, 11, 12". */
+/** "Grade 9" or "Grades 10, 11, 12"; "Staff" for the Teachers homeroom, which has no grades. */
 export const gradeLabel = (h: Pick<Homeroom, "grades">) =>
-  h.grades.length === 1 ? `Grade ${h.grades[0]}` : `Grades ${h.grades.join(", ")}`;
+  h.grades.length === 0 ? "Staff" : h.grades.length === 1 ? `Grade ${h.grades[0]}` : `Grades ${h.grades.join(", ")}`;
 
 /** Dodgeball target: class size × 10 (confirmed rule). */
 export function homeroomStats(h: Homeroom) {

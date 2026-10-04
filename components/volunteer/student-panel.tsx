@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useStudentLogs, useStudentTotals } from "@/lib/volunteer/provider";
 import { fullName } from "@/lib/volunteer/search";
-import type { Student } from "@/lib/volunteer/types";
+import { gradeText, type Student } from "@/lib/volunteer/types";
 import { BTN_SECONDARY, MONO_LABEL } from "@/lib/volunteer/ui";
 import { LogTable } from "./log-table";
 import { TotalsStrip } from "./totals-strip";
@@ -25,7 +25,7 @@ export function StudentPanel({ student, editLogId }: { student: Student; editLog
             {name}
           </h2>
           <p className="mt-1.5 text-[15px] text-body">
-            Grade {student.grade} · Homeroom <strong className="text-ink">{student.homeroom}</strong>
+            {gradeText(student.grade)} · Homeroom <strong className="text-ink">{student.homeroom}</strong>
           </p>
         </div>
         <Link href={`/volunteer/log?student=${student.id}`} className={`${BTN_SECONDARY} min-h-12`}>

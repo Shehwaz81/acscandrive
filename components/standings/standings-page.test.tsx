@@ -149,6 +149,19 @@ describe("student details", () => {
     expect(dialog.textContent).not.toMatch(/#—|#0/);
   });
 
+  it("show a staff member's totals without student rewards", async () => {
+    const live = new MockStandingsRepository();
+    const ref = mockStandingsData().allTime.rows[0].ref;
+    const profile = await live.getStudentProfile(ref);
+    const staff = { ...profile, student: { ...profile.student, grade: null, homeroom: "Teachers", teacher: "Teachers" } };
+    const user = show("live", { searchStudents: (q) => live.searchStudents(q), getStudentProfile: async () => staff });
+    await user.click(within(screen.getByRole("table")).getAllByRole("button", { name: /open details/ })[0]);
+    const dialog = await screen.findByRole("dialog");
+    expect(await within(dialog).findByText("Staff · Homeroom Teachers · Teachers")).toBeInTheDocument();
+    expect(within(dialog).queryByText(/dodgeball/i)).not.toBeInTheDocument();
+    expect(within(dialog).queryByText(/dress.down/i)).not.toBeInTheDocument();
+  });
+
   it("page the history ten at a time", async () => {
     const mock = new MockStandingsRepository();
     const repo: StandingsRepository = {

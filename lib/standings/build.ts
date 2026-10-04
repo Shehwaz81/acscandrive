@@ -119,7 +119,8 @@ function rank(students: Student[], sums: Map<string, Sum>): Ranked[] {
 /**
  * Sums every counted log once. `online` logs are left out until refunds are
  * defined; logs for students who aren't on the roster, and students outside
- * Grades 9–12, are skipped, as on the homepage.
+ * Grades 9–12, are skipped, as on the homepage. Staff (no grade) are ranked
+ * with the students.
  */
 export function buildIndex(
   roster: Student[],
@@ -128,7 +129,7 @@ export function buildIndex(
   /** From teacherLabels(); a room without one falls back to its code. */
   teachers: ReadonlyMap<string, string> = new Map(),
 ): StandingsIndex {
-  const students = roster.filter((s) => s.grade >= 9 && s.grade <= 12);
+  const students = roster.filter((s) => s.grade === null || (s.grade >= 9 && s.grade <= 12));
   const byId = new Map(students.map((s) => [s.id, s]));
   const todayKey = torontoDayKey(now);
 

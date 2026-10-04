@@ -4,7 +4,7 @@ import { formatAmount, logAmount } from "@/lib/volunteer/money";
 import { useLookalikes, useStudentLogs } from "@/lib/volunteer/provider";
 import { fullName } from "@/lib/volunteer/search";
 import { formatTime, isTodayToronto } from "@/lib/volunteer/time";
-import type { Student } from "@/lib/volunteer/types";
+import { gradeText, type Student } from "@/lib/volunteer/types";
 import { BTN_SECONDARY, KBD, MONO_LABEL } from "@/lib/volunteer/ui";
 
 /**
@@ -32,7 +32,7 @@ export function ConfirmBlock({
           <p className="mt-1 font-display text-[40px] leading-[.95] font-black break-words md:text-[46px]">
             {fullName(student)}
           </p>
-          <p className="mt-1.5 text-[15px] text-body">Grade {student.grade}</p>
+          <p className="mt-1.5 text-[15px] text-body">{gradeText(student.grade)}</p>
         </div>
         <div className="flex items-baseline gap-3 bg-ink px-4 py-3 text-paper md:flex-col md:items-start md:justify-center md:gap-1 md:px-6 md:py-4">
           <p className={`${MONO_LABEL} text-rule`}>Homeroom</p>

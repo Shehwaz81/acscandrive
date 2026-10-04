@@ -204,7 +204,8 @@ function Spot({
                 <span className={`font-display leading-[.88] font-black break-words uppercase ${p.name}`}>{entry.firstName}</span>
                 <span className="font-display text-[21px] leading-[.95] font-extrabold break-words lg:text-2xl">{entry.lastName}</span>
                 <span className="pt-0.5 font-mono text-[11px] font-semibold tracking-[.06em]">
-                  GR {entry.grade} · {entry.homeroom}
+                  {entry.grade !== null && `GR ${entry.grade} · `}
+                  {entry.homeroom}
                 </span>
               </div>
             </Can>

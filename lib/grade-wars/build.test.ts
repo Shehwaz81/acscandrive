@@ -9,6 +9,7 @@ const students: Student[] = [
   { id: "2", firstName: "Ben", lastName: "Stone", grade: 9, homeroom: "204" },
   { id: "3", firstName: "Cy", lastName: "Ward", grade: 11, homeroom: "P3" },
   { id: "4", firstName: "Dee", lastName: "Yu", grade: 8 as Grade, homeroom: "12" },
+  { id: "5", firstName: "Bo", lastName: "Marsh", grade: null, homeroom: "Teachers" },
 ];
 
 // October 2026 is EDT (UTC-4): "2026-10-07 12:00" Toronto is 16:00Z.
@@ -127,9 +128,9 @@ describe("buildGradeWars", () => {
     });
   });
 
-  it("skips students missing from the roster or outside Grades 9–12", () => {
+  it("skips students missing from the roster or outside Grades 9–12, and staff", () => {
     const now = toronto("2026-10-07");
-    const logs = [cans(99, 40, now), cans(4, 30, now), cans(3, 5, now)];
+    const logs = [cans(99, 40, now), cans(4, 30, now), cans(5, 20, now), cans(3, 5, now)];
     expect(day(logs, now, "2026-10-07")).toEqual([
       [9, 0, 0, 0],
       [10, 0, 0, 0],

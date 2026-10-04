@@ -20,6 +20,7 @@ import type { ProfileStatus } from "@/lib/standings/use-student-profile";
 import { DRIVE } from "@/lib/site";
 import { canEquivalents, formatCents } from "@/lib/volunteer/money";
 import { formatTime, torontoDayKey } from "@/lib/volunteer/time";
+import { gradeText } from "@/lib/volunteer/types";
 
 const HISTORY_PAGE = 10;
 const CLOSE_MS = 200;
@@ -173,7 +174,7 @@ function Profile({ profile, titleId }: { profile: StudentProfile; titleId: strin
           <span className="block">{student.firstName}</span> <span className="block">{student.lastName}</span>
         </h2>
         <p className="text-[15px] lg:text-base">
-          Grade {student.grade} · Homeroom {student.homeroom} · {student.teacher}
+          {gradeText(student.grade)} · Homeroom {student.homeroom} · {student.teacher}
         </p>
         {student.sameNameCount > 1 && (
           <p className="-rotate-1 self-start border-2 border-tomato px-3 py-2 text-sm font-semibold text-error">
@@ -232,8 +233,13 @@ function Profile({ profile, titleId }: { profile: StudentProfile; titleId: strin
         </div>
       </section>
 
-      <DressDown progress={profile.dressDown} />
-      <Dodgeball homeroom={profile.homeroom} />
+      {/* Rewards are for students; nothing is confirmed for staff. */}
+      {student.grade !== null && (
+        <>
+          <DressDown progress={profile.dressDown} />
+          <Dodgeball homeroom={profile.homeroom} />
+        </>
+      )}
       <History history={history} today={today.date} />
     </>
   );

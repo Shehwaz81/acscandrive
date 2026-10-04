@@ -6,7 +6,7 @@ import { Ticket } from "@/components/ticket";
 import { formatAmount, logAmount } from "@/lib/volunteer/money";
 import { fullName } from "@/lib/volunteer/search";
 import { formatTime } from "@/lib/volunteer/time";
-import type { DonationLog, Student } from "@/lib/volunteer/types";
+import { gradeText, type DonationLog, type Student } from "@/lib/volunteer/types";
 import { BTN_PRIMARY, BTN_SECONDARY, KBD, MONO_LABEL } from "@/lib/volunteer/ui";
 import { DELETE_TRIGGER, DeleteLogConfirm } from "./delete-log-confirm";
 import { focusQuietly } from "./use-hotkeys";
@@ -47,7 +47,7 @@ export function SavedReceipt({
               for <strong>{fullName(student)}</strong>
             </p>
             <p className="text-[15px] text-body">
-              Grade {student.grade} · Homeroom <strong className="text-ink">{student.homeroom}</strong>
+              {gradeText(student.grade)} · Homeroom <strong className="text-ink">{student.homeroom}</strong>
             </p>
           </div>
         </Ticket>

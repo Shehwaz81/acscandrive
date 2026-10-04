@@ -12,3 +12,4 @@ Moved from CLAUDE.md so it loads only when this work comes up. The prohibitions 
 - The supplied roster has no stable school student ID. Generate internal IDs on initial import and preserve them. A repeated import must have an explicit matching/reconciliation strategy; never blindly append or recreate students with donation history.
 - Validate headers, required values, grade range (9–12), row counts, and suspected duplicates before import. Duplicate names may represent different students.
 - Use synthetic students in committed fixtures, screenshots, and tests. Keep the real roster and identifiable donation records out of public repositories and logs.
+- Staff share the table: homeroom `Teachers`, `grade` NULL, added by hand from the staff list (2026-10-04). A student roster import must leave those rows alone, and the 9–12 grade check applies to students only.

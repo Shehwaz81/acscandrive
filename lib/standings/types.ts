@@ -17,7 +17,8 @@ export type PublicStudent = {
   ref: StudentRef;
   firstName: string;
   lastName: string;
-  grade: Grade;
+  /** Null for staff (homeroom "Teachers"). */
+  grade: Grade | null;
   homeroom: string;
   /** Homeroom teacher label, as on the homepage. */
   teacher: string;
