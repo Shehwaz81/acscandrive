@@ -282,7 +282,7 @@ function DetailCard({ h }: { h: Ranked }) {
           </span>
           <FitName name={h.teacher} />
           <span className="text-[15px]">
-            Homeroom {h.room} · {gradeLabel(h)} · Rank {h.rank} · {h.students} students
+            Homeroom {h.room} · {h.students} students
           </span>
         </div>
         <Can variant="meter" fill={s.pct} className="h-[118px] w-[84px]" bodyClassName="bg-transparent" />
