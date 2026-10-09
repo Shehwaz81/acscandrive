@@ -22,5 +22,6 @@ Suggested reading order:
 14. [Requests that finish out of order](14-out-of-order-responses.md). Why a slow, older response can overwrite a newer one, and how stamping each answer with its question prevents it.
 15. [Calendar dates vs. instants](15-calendar-dates-vs-instants.md). Why `2026-10-23` can display as Oct 22, and how to group moments into local days without off-by-one errors.
 16. [Connecting a page to real data](16-connecting-a-page-to-real-data.md). The path from database row to screen, why the UI could be built on fake data first, why that fake data now lives only in tests, and what removing a flag gives up.
+17. [One table, two kinds of row](17-one-table-two-kinds-of-row.md). Where staff go when the app was built for students: one table or two, why a missing value beats a made-up one, and a check constraint that keeps two facts in step.
 
 Never put real student names or donation records in these notes.

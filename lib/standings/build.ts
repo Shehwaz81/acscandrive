@@ -18,7 +18,8 @@ import {
   DRESS_DOWN,
   type DressDownRules,
   dressDownConfirmed,
-  inDrive,
+  countsTowardDrive,
+  earlyFrom,
   inWindow,
   relevantWindow,
   type Window,
@@ -119,7 +120,8 @@ function rank(students: Student[], sums: Map<string, Sum>): Ranked[] {
 /**
  * Sums every counted log once. `online` logs are left out until refunds are
  * defined; logs for students who aren't on the roster, and students outside
- * Grades 9–12, are skipped, as on the homepage.
+ * Grades 9–12, are skipped, as on the homepage. Staff (no grade) are ranked
+ * with the students.
  */
 export function buildIndex(
   roster: Student[],
@@ -128,7 +130,7 @@ export function buildIndex(
   /** From teacherLabels(); a room without one falls back to its code. */
   teachers: ReadonlyMap<string, string> = new Map(),
 ): StandingsIndex {
-  const students = roster.filter((s) => s.grade >= 9 && s.grade <= 12);
+  const students = roster.filter((s) => s.grade === null || (s.grade >= 9 && s.grade <= 12));
   const byId = new Map(students.map((s) => [s.id, s]));
   const todayKey = torontoDayKey(now);
 
@@ -140,7 +142,7 @@ export function buildIndex(
     if (!isCounted(l) || !byId.has(id)) continue;
     add(sums.allTime, id, l);
     if (torontoDayKey(l.occurred_at) === todayKey) add(sums.today, id, l);
-    if (inDrive(l.occurred_at)) add(drive, id, l);
+    if (countsTowardDrive(l.occurred_at)) add(drive, id, l);
     logsById.set(id, [...(logsById.get(id) ?? []), l]);
   }
   for (const list of logsById.values()) list.sort((a, b) => Date.parse(b.occurred_at) - Date.parse(a.occurred_at));
@@ -250,10 +252,13 @@ export function buildDressDown(
   rules: DressDownRules = DRESS_DOWN,
 ): DressDownProgress {
   const cutoff = rules.cutoff.value;
+  const windows = rules.windows.value;
   const result = (w: Window): DressDownWindow => {
+    // The first window also takes donations dated before the drive opened.
+    const from = w === windows[0] ? earlyFrom(w.windowStart) : w.windowStart;
     const sum = { cans: 0, cents: 0 };
     for (const l of logs) {
-      if (!isCounted(l) || !inWindow(w, cutoff, l.occurred_at)) continue;
+      if (!isCounted(l) || !inWindow(w, cutoff, l.occurred_at, from)) continue;
       sum.cans += l.can_count ?? 0;
       sum.cents += l.amount_cents ?? 0;
     }
@@ -261,7 +266,6 @@ export function buildDressDown(
     return { ...w, cutoff, counted, reached: counted >= rules.threshold, closed: windowClosed(w, cutoff, now) };
   };
   const at = relevantWindow(now, rules);
-  const windows = rules.windows.value;
   return {
     confirmed: dressDownConfirmed(rules),
     threshold: rules.threshold,

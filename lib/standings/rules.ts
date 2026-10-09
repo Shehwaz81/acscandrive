@@ -80,10 +80,18 @@ export function windowClosed(w: Window, cutoff: string, now: Date): boolean {
   return today > w.windowEnd || (today === w.windowEnd && torontoClock(now) > cutoff);
 }
 
-/** Does a donation at this instant count toward the window? */
-export function inWindow(w: Window, cutoff: string, occurredAt: string): boolean {
+/**
+ * Early donations (owner, 2026-10-03, so the page can be tried before the
+ * drive opens): a donation dated before the drive's first day, in the same
+ * calendar year, counts toward that drive: its first dress-down window and
+ * the homeroom's dodgeball total. Earlier years never count.
+ */
+export const earlyFrom = (startDate: string) => `${startDate.slice(0, 4)}-01-01`;
+
+/** Does a donation at this instant count toward the window? `from` widens the first window to early donations. */
+export function inWindow(w: Window, cutoff: string, occurredAt: string, from: string = w.windowStart): boolean {
   const day = torontoDayKey(occurredAt);
-  if (day < w.windowStart || day > w.windowEnd) return false;
+  if (day < from || day > w.windowEnd) return false;
   return day < w.windowEnd || torontoClock(occurredAt) <= cutoff;
 }
 
@@ -113,6 +121,12 @@ export const CURRENT_DRIVE = DRIVES[0];
 export function inDrive(occurredAt: string, drive: { startDate: string; endDate: string } = CURRENT_DRIVE): boolean {
   const day = torontoDayKey(occurredAt);
   return day >= drive.startDate && day <= drive.endDate;
+}
+
+/** Does this donation count toward the drive's totals? The drive's dates, plus early donations. */
+export function countsTowardDrive(occurredAt: string, drive: { startDate: string; endDate: string } = CURRENT_DRIVE): boolean {
+  const day = torontoDayKey(occurredAt);
+  return day >= earlyFrom(drive.startDate) && day <= drive.endDate;
 }
 
 /** Heading a donation is grouped under in a student's history. */

@@ -5,6 +5,7 @@ import { formatAmount, logAmount } from "@/lib/volunteer/money";
 import { useRecentLogs } from "@/lib/volunteer/provider";
 import { fullName } from "@/lib/volunteer/search";
 import { formatDay, formatTime, isTodayToronto } from "@/lib/volunteer/time";
+import { gradeText } from "@/lib/volunteer/types";
 import { BTN_SECONDARY, MONO_LABEL } from "@/lib/volunteer/ui";
 
 const SHOWN = 8;
@@ -45,7 +46,7 @@ export function RecentLogs() {
                 <span className="min-w-0">
                   <span className="block truncate text-[15px] font-bold">{fullName(l.student)}</span>
                   <span className="block text-[13px] text-body">
-                    Grade {l.student.grade} · {l.student.homeroom}
+                    {gradeText(l.student.grade)} · {l.student.homeroom}
                   </span>
                 </span>
                 <span className="font-display text-xl font-extrabold tabular-nums">

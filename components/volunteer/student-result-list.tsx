@@ -1,7 +1,7 @@
 "use client";
 
 import { findSameNames, fullName, normalizedName } from "@/lib/volunteer/search";
-import type { Student, StudentSearchResult } from "@/lib/volunteer/types";
+import { gradeText, type Student, type StudentSearchResult } from "@/lib/volunteer/types";
 import { MONO_LABEL } from "@/lib/volunteer/ui";
 
 export function optionId(listId: string, studentId: string) {
@@ -64,7 +64,7 @@ export function StudentResultList({
               </span>
             )}
           </span>
-          <span className="block text-[13px] text-body">Grade {s.grade}</span>
+          <span className="block text-[13px] text-body">{gradeText(s.grade)}</span>
         </span>
         <span className="flex items-baseline gap-2 text-right">
           <span className={`${MONO_LABEL} text-muted`}>Homeroom</span>

@@ -117,7 +117,7 @@ export type Database = {
       students: {
         Row: {
           first_name: string
-          grade: number
+          grade: number | null
           hr: string
           hr_teacher: string
           last_name: string
@@ -125,7 +125,7 @@ export type Database = {
         }
         Insert: {
           first_name: string
-          grade: number
+          grade: number | null
           hr: string
           hr_teacher: string
           last_name: string
@@ -133,7 +133,7 @@ export type Database = {
         }
         Update: {
           first_name?: string
-          grade?: number
+          grade?: number | null
           hr?: string
           hr_teacher?: string
           last_name?: string

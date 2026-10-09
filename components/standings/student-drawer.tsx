@@ -20,6 +20,7 @@ import type { ProfileStatus } from "@/lib/standings/use-student-profile";
 import { DRIVE } from "@/lib/site";
 import { canEquivalents, formatCents } from "@/lib/volunteer/money";
 import { formatTime, torontoDayKey } from "@/lib/volunteer/time";
+import { gradeText } from "@/lib/volunteer/types";
 
 const HISTORY_PAGE = 10;
 const CLOSE_MS = 200;
@@ -173,7 +174,7 @@ function Profile({ profile, titleId }: { profile: StudentProfile; titleId: strin
           <span className="block">{student.firstName}</span> <span className="block">{student.lastName}</span>
         </h2>
         <p className="text-[15px] lg:text-base">
-          Grade {student.grade} · Homeroom {student.homeroom} · {student.teacher}
+          {gradeText(student.grade)} · Homeroom {student.homeroom} · {student.teacher}
         </p>
         {student.sameNameCount > 1 && (
           <p className="-rotate-1 self-start border-2 border-tomato px-3 py-2 text-sm font-semibold text-error">
@@ -232,8 +233,13 @@ function Profile({ profile, titleId }: { profile: StudentProfile; titleId: strin
         </div>
       </section>
 
-      <DressDown progress={profile.dressDown} />
-      <Dodgeball homeroom={profile.homeroom} />
+      {/* Rewards are for students; nothing is confirmed for staff. */}
+      {student.grade !== null && (
+        <>
+          <DressDown progress={profile.dressDown} />
+          <Dodgeball homeroom={profile.homeroom} />
+        </>
+      )}
       <History history={history} today={today.date} />
     </>
   );
@@ -280,7 +286,9 @@ function DressDown({ progress }: { progress: DressDownProgress }) {
             {dressDownStatus(w, progress)}
             {w.reached && <span className="font-normal"> · toward {friday}</span>}
           </p>
-          {progress.phase === "before" && <p className="text-sm text-body">Counting starts {shortDate(w.windowStart)}.</p>}
+          {progress.phase !== "ended" && !progress.previous && (
+            <p className="text-sm text-body">Donations logged before {shortDate(w.windowStart)} count toward this first Friday.</p>
+          )}
           {progress.phase === "ended" && <p className="text-sm text-body">That was the last dress-down day of this drive.</p>}
           {w.counted > threshold && progress.carryoverConfirmed && !progress.carryover && (
             <p className="text-sm text-body">Extra cans don’t carry over to the next Friday.</p>
@@ -292,7 +300,7 @@ function DressDown({ progress }: { progress: DressDownProgress }) {
             </p>
           )}
           <p className="text-[13px] text-body">
-            Only this week’s donations count here, not the all-time total.
+            Only this window’s donations count here, not the all-time total.
             {!progress.confirmed && " Dates and cutoff are still to be confirmed by the organizers."}
           </p>
         </div>
@@ -336,7 +344,8 @@ function Dodgeball({ homeroom: h }: { homeroom: HomeroomProgress }) {
           </div>
           <p className="text-[15px] font-bold">{homeroomStatus(h)}</p>
           <p className="text-sm text-rule">
-            A shared target: everyone in {h.homeroom} adds to one total. Nobody has to bring 10 on their own.
+            A shared target: everyone in {h.homeroom} adds to one total. Nobody has to bring 10 on their own. Donations
+            logged before the drive opens count too.
           </p>
           <ol className="grid grid-cols-3 gap-1.5 pt-1">
             {STEPS.map((label, i) => (

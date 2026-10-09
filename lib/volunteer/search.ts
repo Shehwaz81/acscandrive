@@ -55,7 +55,7 @@ export function compareStudents(a: Student, b: Student): number {
   return (
     a.lastName.localeCompare(b.lastName, "en-CA", { sensitivity: "base" }) ||
     a.firstName.localeCompare(b.firstName, "en-CA", { sensitivity: "base" }) ||
-    a.grade - b.grade
+    (a.grade ?? 0) - (b.grade ?? 0)
   );
 }
 

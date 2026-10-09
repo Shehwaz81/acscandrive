@@ -6,6 +6,7 @@ import { MIN_QUERY } from "@/lib/standings/build";
 import { fullName } from "@/lib/standings/format";
 import type { SearchStatus } from "@/lib/standings/use-student-search";
 import type { SearchItem, SearchResult, StudentRef } from "@/lib/standings/types";
+import { gradeText } from "@/lib/volunteer/types";
 
 export type SearchProps = {
   query: string;
@@ -249,7 +250,7 @@ function Option({
             )}
           </span>
           <span className="text-[13.5px] text-body">
-            Grade {item.grade} · Homeroom {item.homeroom} · {item.teacher}
+            {gradeText(item.grade)} · Homeroom {item.homeroom} · {item.teacher}
           </span>
         </span>
         {item.total === null ? (

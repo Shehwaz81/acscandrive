@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { buildHomepageData, type LogRow, matchesQuery, ordinalSuffix, publicName, teacherLabels } from "./homepage";
+import { buildHomepageData, gradeLabel, type LogRow, matchesQuery, ordinalSuffix, publicName, teacherLabels } from "./homepage";
 import type { Student } from "./volunteer/types";
 
 // Synthetic roster: never real students in tests.
@@ -87,6 +87,17 @@ describe("buildHomepageData", () => {
     const d = build([cans(1, 7, lateYesterday), cans(2, 2, earlyToday)]);
     expect(d.topDonors.map((x) => x.name)).toEqual(["Ben S."]);
     expect(d.total).toBe(9);
+  });
+
+  it("treats Teachers as a homeroom with no grades: counted and ranked, not in Grade Wars", () => {
+    const staff: Student = { id: "9", firstName: "Bo", lastName: "Marsh", grade: null, homeroom: "Teachers" };
+    const d = buildHomepageData([...students, staff], [cans(9, 30), cans(1, 4)], 20_000, NOW, teachers);
+    expect(d.total).toBe(34);
+    const room = d.homerooms[0];
+    expect(room).toMatchObject({ room: "Teachers", teacher: "Teachers", grades: [], students: 1, total: 30 });
+    expect(gradeLabel(room)).toBe("Staff");
+    expect(d.topDonors[0]).toEqual({ name: "Bo M.", room: "Teachers", teacher: "Teachers", cans: 30 });
+    expect(d.gradeWars.results.at(-1)!.totals.reduce((sum, t) => sum + t.total, 0)).toBe(4);
   });
 
   it("sends no student ids or full last names", () => {
