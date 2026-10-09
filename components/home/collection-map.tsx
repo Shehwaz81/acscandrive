@@ -9,6 +9,7 @@ import {
   SCHOOL_LOCATION,
 } from "@/lib/collection-area";
 import { WRAP } from "@/lib/site";
+import { ClaimedList } from "./claimed-list";
 
 // Browser keys are public by design; they are protected by referrer and API
 // restrictions in Google Cloud (see docs/architecture.md, Collection map).
@@ -24,7 +25,6 @@ const SCRIPT_SRC = API_KEY
 
 const LOAD_ERROR = "The map couldn't load. Refresh the page to try again.";
 const SEARCH_ERROR = "Search isn't available right now. Try again in a moment.";
-const CLAIMS_ERROR = "Claimed streets couldn't load. Refresh the page to try again.";
 const NETWORK_ERROR = "Couldn't reach the server. Check your connection and try again.";
 const PICK_NAME = "Pick your name from the list.";
 
@@ -829,30 +829,6 @@ function DeleteClaim({
         </button>
       </div>
     </form>
-  );
-}
-
-function ClaimedList({ claims, failed }: { claims: PublicClaim[] | null; failed: boolean }) {
-  return (
-    <div className="flex min-w-0 flex-col gap-2 lg:col-start-2 lg:row-start-3">
-      <h3 className="font-mono text-[11px] font-semibold tracking-[.14em] text-muted lg:text-xs">CLAIMED STREETS</h3>
-      {failed ? (
-        <p className="text-[14px] font-semibold text-error">{CLAIMS_ERROR}</p>
-      ) : claims === null ? (
-        <p className="text-[14px] text-body">Loading…</p>
-      ) : claims.length === 0 ? (
-        <p className="text-[14px] text-body">No streets claimed yet. Be the first.</p>
-      ) : (
-        <ul className="divide-y-2 divide-rule border-2 border-ink bg-paper">
-          {claims.map((c) => (
-            <li key={c.placeId} className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-0.5 px-4 py-2.5">
-              <span className="min-w-0 font-semibold break-words">{c.address}</span>
-              <span className="text-[14px] text-body">{c.claimer}</span>
-            </li>
-          ))}
-        </ul>
-      )}
-    </div>
   );
 }
 
