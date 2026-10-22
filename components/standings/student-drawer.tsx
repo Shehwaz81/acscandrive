@@ -267,7 +267,7 @@ function DressDown({ progress }: { progress: DressDownProgress }) {
           </div>
           {w.reached ? (
             <p className="font-display text-[34px] leading-[.95] font-black uppercase lg:text-[40px]">
-              Target reached: {fmt(w.counted)} counted this week
+              Target reached: {fmt(w.counted)} counted
             </p>
           ) : (
             <p className="flex flex-wrap items-baseline gap-x-3">
@@ -290,9 +290,6 @@ function DressDown({ progress }: { progress: DressDownProgress }) {
             <p className="text-sm text-body">Donations logged before {shortDate(w.windowStart)} count toward this first Friday.</p>
           )}
           {progress.phase === "ended" && <p className="text-sm text-body">That was the last dress-down day of this drive.</p>}
-          {w.counted > threshold && progress.carryoverConfirmed && !progress.carryover && (
-            <p className="text-sm text-body">Extra cans don’t carry over to the next Friday.</p>
-          )}
           {progress.previous && (
             <p className="border-t-2 border-dashed border-ink/45 pt-3 text-sm">
               <span className="font-semibold">Previous: {shortDate(progress.previous.friday)}.</span>{" "}
@@ -300,7 +297,7 @@ function DressDown({ progress }: { progress: DressDownProgress }) {
             </p>
           )}
           <p className="text-[13px] text-body">
-            Only this window’s donations count here, not the all-time total.
+            Cans over {threshold} carry over to the next Friday.
             {!progress.confirmed && " Dates and cutoff are still to be confirmed by the organizers."}
           </p>
         </div>

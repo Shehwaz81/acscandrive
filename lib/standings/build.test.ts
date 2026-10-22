@@ -158,11 +158,11 @@ describe("ranks and ties", () => {
 describe("dress-down progress", () => {
   const at = (iso: string) => new Date(iso);
 
-  it("has one window per Friday in the drive", () => {
+  it("has one Monday-to-Friday window per Friday, weekends counting toward the next", () => {
     expect(dressDownWindows("2026-10-05", "2026-10-23")).toEqual([
-      { friday: "2026-10-09", windowStart: "2026-10-05", windowEnd: "2026-10-08" },
-      { friday: "2026-10-16", windowStart: "2026-10-09", windowEnd: "2026-10-15" },
-      { friday: "2026-10-23", windowStart: "2026-10-16", windowEnd: "2026-10-22" },
+      { friday: "2026-10-09", windowStart: "2026-10-05", windowEnd: "2026-10-09" },
+      { friday: "2026-10-16", windowStart: "2026-10-10", windowEnd: "2026-10-16" },
+      { friday: "2026-10-23", windowStart: "2026-10-17", windowEnd: "2026-10-23" },
     ]);
   });
 
@@ -173,14 +173,24 @@ describe("dress-down progress", () => {
     expect(after).toMatchObject({ phase: "ended", current: { friday: "2026-10-23", closed: true }, previous: { friday: "2026-10-16" } });
   });
 
-  it("counts only the window's donations, never the all-time total", () => {
-    const p = buildDressDown([cans(1, 40, "2026-10-06T13:00:00Z"), cans(1, 3, "2026-10-13T13:00:00Z")], at("2026-10-14T16:00:00Z"));
-    expect(p.current).toMatchObject({ friday: "2026-10-16", counted: 3, reached: false, closed: false });
-    expect(p.previous).toMatchObject({ friday: "2026-10-09", counted: 40, reached: true, closed: true });
-    expect(dressDownStatus(p.current!, p)).toBe("7 more to reach the target");
+  describe("carries cans over 10 to later Fridays", () => {
+    const final = (logs: Parameters<typeof buildDressDown>[0]) => {
+      const p = buildDressDown(logs, at("2026-10-30T16:00:00Z"));
+      return [p.previous!.reached, p.current!.reached];
+    };
+    it("30 in week 1 covers weeks 2 and 3", () => expect(final([cans(1, 30, "2026-10-06T13:00:00Z")])).toEqual([true, true]));
+    it("20 in week 2 covers week 3", () => expect(final([cans(1, 20, "2026-10-13T13:00:00Z")])).toEqual([true, true]));
+    it("10 in week 3 alone is enough", () => expect(final([cans(1, 10, "2026-10-20T13:00:00Z")])).toEqual([false, true]));
+    it("10 a week for two weeks leaves nothing for week 3", () =>
+      expect(final([cans(1, 10, "2026-10-06T13:00:00Z"), cans(1, 10, "2026-10-13T13:00:00Z")])).toEqual([true, false]));
+    it("keeps leftovers through a missed week", () => {
+      const p = buildDressDown([cans(1, 15, "2026-10-06T13:00:00Z"), cash(1, 500, "2026-10-20T13:00:00Z")], at("2026-10-30T16:00:00Z"));
+      expect(p.previous).toMatchObject({ counted: 5, reached: false });
+      expect(p.current).toMatchObject({ counted: 10, reached: true });
+    });
   });
 
-  it("counts donations dated before the drive toward the first Friday only, never last year's", () => {
+  it("counts donations dated before the drive, never last year's", () => {
     const logs = [cans(1, 6, "2026-10-02T13:00:00Z"), cash(1, 450, "2026-10-06T13:00:00Z"), cans(1, 50, "2025-10-14T13:00:00Z")];
     const before = buildDressDown(logs, at("2026-10-03T16:00:00Z"));
     expect(before).toMatchObject({ phase: "before", current: { friday: "2026-10-09", counted: 10, reached: true } });
@@ -189,13 +199,13 @@ describe("dress-down progress", () => {
     expect(week2.previous).toMatchObject({ friday: "2026-10-09", counted: 10 });
   });
 
-  it("switches window at the cutoff: Thursday 11:59 p.m. Toronto", () => {
-    // Thu Oct 15 23:59:30 and Fri Oct 16 00:00:00 in Toronto.
-    const lastMinute = cans(1, 10, "2026-10-16T03:59:30Z");
-    const afterCutoff = cans(1, 4, "2026-10-16T04:00:00Z");
-    const open = buildDressDown([lastMinute, afterCutoff], at("2026-10-16T03:59:00Z"));
+  it("switches window at the cutoff: Friday 11:59 p.m. Toronto", () => {
+    // Fri Oct 16 23:59:30 and Sat Oct 17 00:00:00 in Toronto.
+    const lastMinute = cans(1, 10, "2026-10-17T03:59:30Z");
+    const afterCutoff = cans(1, 4, "2026-10-17T04:00:00Z");
+    const open = buildDressDown([lastMinute, afterCutoff], at("2026-10-17T03:59:00Z"));
     expect(open.current).toMatchObject({ friday: "2026-10-16", counted: 10, reached: true, closed: false });
-    const next = buildDressDown([lastMinute, afterCutoff], at("2026-10-16T04:00:00Z"));
+    const next = buildDressDown([lastMinute, afterCutoff], at("2026-10-17T04:00:00Z"));
     expect(next.current).toMatchObject({ friday: "2026-10-23", counted: 4 });
     expect(next.previous).toMatchObject({ friday: "2026-10-16", counted: 10, closed: true });
   });
@@ -203,12 +213,12 @@ describe("dress-down progress", () => {
   it("shows the real number over 10 and says 'Eligible' only on confirmed rules", () => {
     const p = buildDressDown([cans(1, 9, "2026-10-13T13:00:00Z"), cash(1, 550, "2026-10-13T13:00:00Z")], at("2026-10-14T16:00:00Z"));
     expect(p.current).toMatchObject({ counted: 14, reached: true });
-    expect(p.confirmed).toBe(false);
-    expect(dressDownStatus(p.current!, p)).toBe("Reached 10 by the cutoff");
-    expect(dressDownStatus(p.current!, { ...p, confirmed: true })).toBe("Eligible");
-    // Every placeholder must be confirmed, not just one.
-    const half = { ...DRESS_DOWN, cutoff: { ...DRESS_DOWN.cutoff, confirmed: true } };
-    expect(buildDressDown([], at("2026-10-14T16:00:00Z"), half).confirmed).toBe(false);
+    expect(p.confirmed).toBe(true);
+    expect(dressDownStatus(p.current!, p)).toBe("Eligible");
+    const draft = { ...DRESS_DOWN, cutoff: { ...DRESS_DOWN.cutoff, confirmed: false } };
+    const provisional = buildDressDown([], at("2026-10-14T16:00:00Z"), draft);
+    expect(provisional.confirmed).toBe(false);
+    expect(dressDownStatus(p.current!, provisional)).toBe("Reached 10 by the cutoff");
   });
 });
 

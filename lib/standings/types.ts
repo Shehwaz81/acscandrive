@@ -80,12 +80,12 @@ export type SearchResult = {
 export type DressDownWindow = {
   /** The dress-down Friday, "2026-10-23". */
   friday: string;
-  /** First and last Toronto days that count toward it. */
+  /** The week's first and last Toronto days. */
   windowStart: string;
   windowEnd: string;
   /** Toronto wall-clock time on `windowEnd`, "23:59". */
   cutoff: string;
-  /** This student's can-equivalents inside the window; never capped. */
+  /** Can-equivalents up to the cutoff, less the threshold per earlier Friday reached; never capped. */
   counted: number;
   reached: boolean;
   /** The cutoff has passed, so `counted` can no longer change. */
@@ -93,11 +93,9 @@ export type DressDownWindow = {
 };
 
 export type DressDownProgress = {
-  /** False while the windows, cutoff or carryover are placeholders: say "provisional", never "eligible". */
+  /** False while the windows or cutoff are placeholders: say "provisional", never "eligible". */
   confirmed: boolean;
   threshold: number;
-  carryover: boolean;
-  carryoverConfirmed: boolean;
   /** "ended": the last cutoff has passed and `current` is that last Friday's result. */
   phase: "before" | "open" | "ended";
   /** Null only if the drive contains no Friday. */

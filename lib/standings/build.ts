@@ -22,7 +22,6 @@ import {
   earlyFrom,
   inWindow,
   relevantWindow,
-  type Window,
   windowClosed,
 } from "./rules";
 import type {
@@ -253,27 +252,28 @@ export function buildDressDown(
 ): DressDownProgress {
   const cutoff = rules.cutoff.value;
   const windows = rules.windows.value;
-  const result = (w: Window): DressDownWindow => {
-    // The first window also takes donations dated before the drive opened.
-    const from = w === windows[0] ? earlyFrom(w.windowStart) : w.windowStart;
+  // Carryover: a Friday counts everything up to its cutoff (early donations
+  // included), less `threshold` for each earlier Friday that was reached.
+  let earned = 0;
+  const results = windows.map((w): DressDownWindow => {
     const sum = { cans: 0, cents: 0 };
     for (const l of logs) {
-      if (!isCounted(l) || !inWindow(w, cutoff, l.occurred_at, from)) continue;
+      if (!isCounted(l) || !inWindow(w, cutoff, l.occurred_at, earlyFrom(windows[0].windowStart))) continue;
       sum.cans += l.can_count ?? 0;
       sum.cents += l.amount_cents ?? 0;
     }
-    const counted = canEquivalents(sum.cans, sum.cents);
-    return { ...w, cutoff, counted, reached: counted >= rules.threshold, closed: windowClosed(w, cutoff, now) };
-  };
+    const counted = canEquivalents(sum.cans, sum.cents) - rules.threshold * earned;
+    const reached = counted >= rules.threshold;
+    if (reached) earned++;
+    return { ...w, cutoff, counted, reached, closed: windowClosed(w, cutoff, now) };
+  });
   const at = relevantWindow(now, rules);
   return {
     confirmed: dressDownConfirmed(rules),
     threshold: rules.threshold,
-    carryover: rules.carryover.value,
-    carryoverConfirmed: rules.carryover.confirmed,
     phase: at?.phase ?? "ended",
-    current: at ? result(windows[at.index]) : null,
-    previous: at && at.index > 0 ? result(windows[at.index - 1]) : null,
+    current: at ? results[at.index] : null,
+    previous: at && at.index > 0 ? results[at.index - 1] : null,
   };
 }
 

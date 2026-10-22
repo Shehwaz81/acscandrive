@@ -4,6 +4,8 @@
  *
  * Confirmed (owner, 2026-09-29): $1 = 1 can; dress-down at 10 cans or $10 in
  * any mix; dodgeball for the first 20 homerooms to reach class size × 10.
+ * Confirmed (owner, 2026-10-22): dress-down weeks run Monday to Friday, and
+ * cans beyond 10 carry over to later Fridays.
  *
  * Everything marked `confirmed: false` is a PLACEHOLDER so progress can be
  * shown. Nothing may be presented as final ("Eligible", "Qualified") on a
@@ -25,8 +27,8 @@ const weekday = (date: string) => new Date(atNoon(date)).getUTCDay();
 export type Window = { friday: string; windowStart: string; windowEnd: string };
 
 /**
- * One window per Friday in the drive. Placeholder shape: each runs from the
- * day after the previous window ended through the Thursday before its Friday;
+ * One window per Friday in the drive, ending on that Friday. Each starts the
+ * day after the previous one ended (so weekends count toward the next Friday);
  * the first starts on the drive's first day.
  */
 export function dressDownWindows(startDate: string, endDate: string): Window[] {
@@ -34,9 +36,8 @@ export function dressDownWindows(startDate: string, endDate: string): Window[] {
   let windowStart = startDate;
   for (let d = startDate; d <= endDate; d = addDays(d, 1)) {
     if (weekday(d) !== 5) continue;
-    const windowEnd = addDays(d, -1);
-    windows.push({ friday: d, windowStart, windowEnd });
-    windowStart = addDays(windowEnd, 1);
+    windows.push({ friday: d, windowStart, windowEnd: d });
+    windowStart = addDays(d, 1);
   }
   return windows;
 }
@@ -45,18 +46,16 @@ export const DRESS_DOWN = {
   /** Confirmed: 10 cans or $10, any mix. */
   threshold: 10,
   /** Which days count toward which Friday. */
-  windows: { confirmed: false, value: dressDownWindows(DRIVE.startDate, DRIVE.endDate) },
-  /** Last counted minute on the window's Thursday, Toronto wall-clock. */
-  cutoff: { confirmed: false, value: "23:59" },
-  /** Whether cans beyond 10 count toward a later Friday. */
-  carryover: { confirmed: false, value: false },
+  windows: { confirmed: true, value: dressDownWindows(DRIVE.startDate, DRIVE.endDate) },
+  /** Last counted minute on the window's Friday, Toronto wall-clock. */
+  cutoff: { confirmed: true, value: "23:59" },
 };
 
 export type DressDownRules = typeof DRESS_DOWN;
 
 /** True only once every dress-down placeholder has been confirmed. */
 export const dressDownConfirmed = (rules: DressDownRules = DRESS_DOWN) =>
-  rules.windows.confirmed && rules.cutoff.confirmed && rules.carryover.confirmed;
+  rules.windows.confirmed && rules.cutoff.confirmed;
 
 /** How equal totals are settled (lunch vouchers, the table). Unconfirmed: the page shows ties and settles nothing. */
 export const TIES = { confirmed: false };

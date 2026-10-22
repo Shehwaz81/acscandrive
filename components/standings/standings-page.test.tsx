@@ -103,8 +103,8 @@ describe("student details", () => {
     expect(await within(dialog).findByText("#29 OF 49 ALL-TIME")).toBeInTheDocument();
     expect(within(dialog).getByText("Outside the all-time top 25; #25 is on 75.")).toBeInTheDocument();
     expect(within(dialog).getByText("#1 of 11 donors today")).toBeInTheDocument();
-    expect(within(dialog).getByText("PROVISIONAL RULES")).toBeInTheDocument();
-    expect(within(dialog).queryByText(/Eligible|Qualified/)).toBeNull();
+    expect(within(dialog).queryByText("PROVISIONAL RULES")).toBeNull();
+    expect(within(dialog).queryByText(/Qualified/)).toBeNull();
     expect(window.location.search).toContain("student=");
 
     await user.keyboard("{Escape}");
